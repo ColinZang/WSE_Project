@@ -9,5 +9,6 @@ public class Crawler {
         System.out.println("WebSearchEngine");
         System.out.println("Welcome to web search engine project!!!");
         System.out.println("welcome");
+        System.out.println("web");
     }
 }
