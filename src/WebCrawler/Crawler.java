@@ -5,11 +5,6 @@ package WebCrawler;
  */
 public class Crawler {
     public static void main(String[] args) {
-        System.out.println("Welcome to web search engine project");
-        System.out.println("WebSearchEngine");
-        System.out.println("Welcome to web search engine project!!!");
-        System.out.println("welcome");
-        System.out.println("Change by Min");
-        System.out.println("web");
+
     }
 }
