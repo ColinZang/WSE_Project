@@ -14,17 +14,18 @@ public class Crawler {
             new ConcurrentLinkedQueue<URL>();
     private static ConcurrentHashMap<Integer, HashSet<URL>> internalHashMap =
             new ConcurrentHashMap<Integer, HashSet<URL>>();
-    private static int count = 0;
-    private static final Object COUNT_LOCK = new Object();
+    private static int searchLimit = 0;
+    private static int pageCount = 0;
+    private static final Object PAGE_COUNT_LOCK = new Object();
     private static final Object INTERNAL_HASHMAP_LOCK = new Object();
 
     /**
-     * This method takes the input file Scanner, maximum page to download, and
+     * This method takes the input file Scanner and
      * the path to save the results
      */
-    private static void run(Scanner readFile, int maxPage, String savePath) {
+    private static void run(Scanner readFile, String savePath) {
         initialize(readFile);
-        crawl(maxPage, savePath);
+        crawl(savePath);
     }
 
     /**
@@ -68,52 +69,40 @@ public class Crawler {
      */
     private static int hash(URL url) {
         final int EXTERNAL_HASHSET_COUNT = 100;
-        return url.toString().hashCode() % EXTERNAL_HASHSET_COUNT;
+        return Math.abs(url.toString().hashCode()) % EXTERNAL_HASHSET_COUNT;
     }
 
     /**
      * This method is the crawling process
      */
-    private static void crawl(int maxPage, String savePath) {
+    private static void crawl(String savePath) {
         setProxy();
-        final int THREAD_COUNT = 100;
-        while (count < maxPage) {
-            // clear the urlQueue first, in case there're remaining urls from the last round
-            urlQueue.clear();
-            // add new urls from internal hashmap to queue and remove duplicates
-            addToUrlQueue();
-            // if the urlQueue is still empty after adding new urls, it means no new urls are found,
-            // the whole crawling process has to stop
+        int totalThreadCount = 0;
+        while (pageCount < searchLimit) {
             if (urlQueue.isEmpty()) {
-                break;
-            }
-            // must clear the internal hashmap before the next round of crawling
-            internalHashMap.clear();
-            Thread[] threads = new Thread[THREAD_COUNT];
-            for (int i = 0; i < THREAD_COUNT; i++) {
-                threads[i] = new Thread(new Crawling(savePath));
-                // run the thread after creation
-                threads[i].start();
-            }
-            long startTime = System.currentTimeMillis();
-            final long waitTime = 5000;
-            int finished = 0;
-            // keep counting how many threads are still alive, if after a certain waitTime,
-            // some threads are still running, have to stop them
-            while (finished < THREAD_COUNT && System.currentTimeMillis() - startTime < waitTime) {
-                finished = 0;
-                for (int i = 0; i < THREAD_COUNT; i++) {
-                    if (!threads[i].isAlive()) {
-                        finished++;
-                    }
+                synchronized (INTERNAL_HASHMAP_LOCK) {
+                    // add new urls from internal hashmap to queue and ignore duplicates
+                    addToUrlQueue(savePath);
+                    // must clear the internal hashmap before this round of crawling
+                    internalHashMap.clear();
                 }
+                // if the urlQueue is still empty after adding new urls, it means no new urls are found,
+                // the whole crawling process has to stop
+                // how???
             }
-            // stop the remaining alive threads
-            if (finished < THREAD_COUNT) {
-                for (int i = 0; i < THREAD_COUNT; i++) {
-                    if (threads[i].isAlive()) {
-                        threads[i].interrupt();
-                    }
+            // the ratio between new url count and new thread count
+            final double THREAD_RATIO = 1;
+            final int MAX_THREAD_LIMIT = 1000;
+            int newThreadCount = (int)(urlQueue.size() * THREAD_RATIO);
+            int activeThreadCount = Crawling.getActiveThreadCount();
+            newThreadCount = Math.min(newThreadCount, MAX_THREAD_LIMIT - activeThreadCount);
+            if (newThreadCount > 0) {
+                Thread[] threads = new Thread[newThreadCount];
+                for (int i = 0; i < newThreadCount; i++) {
+                    threads[i] = new Thread(new Crawling(totalThreadCount + 1, savePath));
+                    // run the thread after creation
+                    threads[i].start();
+                    totalThreadCount++;
                 }
             }
         }
@@ -135,16 +124,37 @@ public class Crawler {
      * This method compares the internal hashmap and external hashset, add non-duplicate
      * urls to both the queue and external hashset, and ignore duplicates
      */
-    private static void addToUrlQueue() {
+    @SuppressWarnings("unchecked")
+    private static void addToUrlQueue(String savePath) {
         for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
+            // make a separate directory for the external hashsets, if haven't
+            String dirPath = savePath + "HashSets" + File.separator;
+            File dir = new File(dirPath);
+            if (!dir.exists()) {
+                dir.mkdir();
+            }
             // index corresponds to the id of the external hashset
             int index = entry.getKey();
+            String externalName = "External" + index + ".ser";
+            File file = new File(dirPath + externalName);
             HashSet<URL> internalHashSet = entry.getValue();
             HashSet<URL> externalHashSet = null;
-            if (/* external hashSet of this index exists */ true) {
-                /*load into memory*/
+            if (file.exists()) {
+                // load external hashset
+                try {
+                    FileInputStream fis = new FileInputStream(dirPath + externalName);
+                    ObjectInputStream ois = new ObjectInputStream(fis);
+                    externalHashSet = (HashSet<URL>) ois.readObject();
+                    ois.close();
+                } catch (IOException e) {
+                    // ignore or add something?
+                } catch (ClassNotFoundException e) {
+                    // ignore or add something?
+                }
             }
-            else {
+            // if the external hashset does not exist, create one
+            // but if it exists but fails to load, should overwrite it?
+            if (externalHashSet == null) {
                 externalHashSet = new HashSet<URL>();
             }
             // iterate through the internal hashset, if the url is duplicated, just ignore,
@@ -155,7 +165,15 @@ public class Crawler {
                     urlQueue.add(url);
                 }
             }
-            /* save external hashset back */
+            // save external hashset back
+            try {
+                FileOutputStream fos = new FileOutputStream(dirPath + externalName);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(externalHashSet);
+                oos.close();
+            } catch (IOException e) {
+                // ignore or add something?
+            }
         }
     }
 
@@ -163,17 +181,22 @@ public class Crawler {
      * The run() method in this class specifies what each thread is doing
      */
     private static class Crawling implements Runnable {
+        private static int activeThreadCount = 0;
+        private int threadID;
         private String savePath;
 
-        public Crawling(String savePath) {
-            this.savePath = savePath;
+        public Crawling(int id, String path) {
+            threadID = id;
+            savePath = path;
         }
 
         public void run() {
+            System.out.println("thread " + threadID + " started");
+            activeThreadCount++;
             URL url = null;
             // if use urlQueue.isEmpty() and urlQueue.poll() separately,
             // may have concurrency issue
-            while ((url = urlQueue.poll()) != null) {
+            while (pageCount < searchLimit && (url = urlQueue.poll()) != null) {
                 if (!isRobotSafe(url)) {
                     continue;
                 }
@@ -185,13 +208,14 @@ public class Crawler {
                 }
                 // use count as the file name, and only when the page is saved successfully,
                 // the count increments
-                synchronized (COUNT_LOCK) {
+                synchronized (PAGE_COUNT_LOCK) {
                     try {
-                        savePage(page, savePath, (count + 1) + "");
+                        savePage(page, savePath, (pageCount + 1) + "");
                     } catch (IOException e) {
                         continue;
                     }
-                    count++;
+                    pageCount++;
+                    System.out.println("thread " + threadID + " downloaded page " + pageCount);
                 }
                 indexPage(page);
                 List<URL> newUrls = extractUrl(url, page);
@@ -202,6 +226,17 @@ public class Crawler {
                     addToInternalHashMap(newUrl);
                 }
             }
+            if (pageCount >= searchLimit) {
+                System.out.println("thread " + threadID + " terminated because search limit is reached");
+            }
+            else {
+                System.out.println("thread " + threadID + " terminated because queue of the current round is empty");
+            }
+            activeThreadCount--;
+        }
+
+        public static int getActiveThreadCount() {
+            return activeThreadCount;
         }
     }
 
@@ -309,7 +344,7 @@ public class Crawler {
                         if (index + 2 <= content.length() && content.substring(index, index + 2).equals("en")) {
                             notKnownIfEnglish = false;
                         }
-                        // lang==something other language, return
+                        // lang==some other language, return
                         else if (index + 2 <= content.length()) {
                             return "";
                         }
@@ -346,9 +381,6 @@ public class Crawler {
     private static void savePage(String page, String savePath, String fileName)
             throws IOException {
         fileName += ".html";
-        if (!savePath.endsWith(File.separator)) {
-            savePath += File.separator;
-        }
         File file = new File(savePath + fileName);
         file.createNewFile();
         FileWriter writer = new FileWriter(file);
@@ -404,14 +436,19 @@ public class Crawler {
     }
 
     public static void main(String[] args) {
-        String usage = "usage: java Crawler [-root rootURLFile] [-path savePath] [-max maxPage]";
+        System.out.println("\nPlease remember to clear the result folder before running");
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            // ignore
+        }
+        String usage = "usage: java Crawler [-root rootURLFile] [-path savePath] [-max searchLimit]";
         final int ARG_COUNT = 6;
         if (args.length != ARG_COUNT) {
             System.out.println(usage);
             System.exit(1);
         }
         Scanner readFile = null;
-        int maxPage = 0;
         String savePath = null;
         int index = 0;
         while (index < args.length) {
@@ -425,6 +462,7 @@ public class Crawler {
                 }
             }
             else if (args[index].equals("-path")) {
+                savePath = args[index + 1];
                 if (savePath == null) {
                     System.out.println(usage);
                     System.exit(1);
@@ -439,13 +477,17 @@ public class Crawler {
                     System.out.println("Please provide the path of a directory");
                     System.exit(1);
                 }
+                if (!savePath.endsWith(File.separator)) {
+                    savePath += File.separator;
+                }
+                index += 2;
             }
             else if (args[index].equals("-max")) {
                 try {
-                    maxPage = Integer.parseInt(args[index + 1]);
+                    searchLimit = Integer.parseInt(args[index + 1]);
                     index += 2;
                 } catch (NumberFormatException e) {
-                    System.out.println("Please provide an integer value for maxPage");
+                    System.out.println("Please provide an integer value for searchLimit");
                     System.exit(1);
                 }
             }
@@ -454,7 +496,7 @@ public class Crawler {
                 System.exit(1);
             }
         }
-        run(readFile, maxPage, savePath);
+        run(readFile, savePath);
     }
 
 }

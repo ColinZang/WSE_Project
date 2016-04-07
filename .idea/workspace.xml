@@ -28,12 +28,13 @@
       <file leaf-file-name="Crawler.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="60">
-              <caret line="125" column="65" selection-start-line="125" selection-start-column="65" selection-end-line="125" selection-end-column="65" />
+            <state relative-caret-position="57">
+              <caret line="430" column="17" selection-start-line="430" selection-start-column="17" selection-end-line="430" selection-end-column="17" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#6287#6288#0" expanded="true" />
-                <element signature="e#6335#6336#0" expanded="true" />
+                <element signature="e#4697#4727#0" expanded="true" />
+                <element signature="e#9656#9657#0" expanded="true" />
+                <element signature="e#9704#9705#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -76,7 +77,7 @@
   <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="1280" />
-    <option name="height" value="737" />
+    <option name="height" value="736" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="false">
     <OptionsSetting value="true" id="Add" />
@@ -136,6 +137,20 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="WebCrawler" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="WSE_Project" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="WSE_Project" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -418,11 +433,18 @@
       <option name="project" value="LOCAL" />
       <updated>1459879344274</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Added methods about page processing">
+      <created>1459969577086</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1459969577086</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1280" height="737" extended-state="6" />
+    <frame x="0" y="23" width="1280" height="736" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -456,7 +478,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Draft" />
     <MESSAGE value="Added synchronization for addToInternalHashMap method" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added synchronization for addToInternalHashMap method" />
+    <MESSAGE value="Added methods about page processing" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added methods about page processing" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -469,8 +492,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#6287#6288#0" expanded="true" />
-            <element signature="e#6335#6336#0" expanded="true" />
+            <element signature="e#4697#4727#0" expanded="true" />
+            <element signature="e#9656#9657#0" expanded="true" />
+            <element signature="e#9704#9705#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -489,8 +513,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#6287#6288#0" expanded="true" />
-            <element signature="e#6335#6336#0" expanded="true" />
+            <element signature="e#4697#4727#0" expanded="true" />
+            <element signature="e#9656#9657#0" expanded="true" />
+            <element signature="e#9704#9705#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -524,8 +549,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#6287#6288#0" expanded="true" />
-            <element signature="e#6335#6336#0" expanded="true" />
+            <element signature="e#4697#4727#0" expanded="true" />
+            <element signature="e#9656#9657#0" expanded="true" />
+            <element signature="e#9704#9705#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -540,12 +566,13 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="60">
-          <caret line="125" column="65" selection-start-line="125" selection-start-column="65" selection-end-line="125" selection-end-column="65" />
+        <state relative-caret-position="57">
+          <caret line="430" column="17" selection-start-line="430" selection-start-column="17" selection-end-line="430" selection-end-column="17" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#6287#6288#0" expanded="true" />
-            <element signature="e#6335#6336#0" expanded="true" />
+            <element signature="e#4697#4727#0" expanded="true" />
+            <element signature="e#9656#9657#0" expanded="true" />
+            <element signature="e#9704#9705#0" expanded="true" />
           </folding>
         </state>
       </provider>
