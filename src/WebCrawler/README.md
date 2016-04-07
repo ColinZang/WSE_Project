@@ -8,8 +8,8 @@
 
    For example:
 
-   java WebCrawler/Crawler -root ../result/SeedExtractor/seedResult.txt 
-                           -path ../result/WebCrawler 
+   java WebCrawler/Crawler -root ../result/SeedExtractor/seedResult.txt
+                           -path ../result/WebCrawler
                            -max 10000
 
 2. Please remember to clear the result folder before each run, or change to another folder. Otherwise, the external hashset generated from last run still exists and the crawler will stop very early.
