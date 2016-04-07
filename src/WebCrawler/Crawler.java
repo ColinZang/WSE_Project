@@ -82,13 +82,34 @@ public class Crawler {
      */
     private static void crawl(String savePath) {
         setProxy();
-        addToUrlQueue(savePath);
-        final int THREAD_COUNT = 1500;
-        Thread[] threads = new Thread[THREAD_COUNT];
-        for (int i = 0; i < THREAD_COUNT; i++) {
-            threads[i] = new Thread(new Crawling(i, savePath));
-            // run the thread after creation
-            threads[i].start();
+        int totalThreadCount = 0;
+        while (pageCount < searchLimit) {
+            if (urlQueue.isEmpty()) {
+                synchronized (INTERNAL_HASHMAP_LOCK) {
+                    // add new urls from internal hashmap to queue and ignore duplicates
+                    addToUrlQueue(savePath);
+                    // must clear the internal hashmap before this round of crawling
+                    internalHashMap.clear();
+                }
+                // if the urlQueue is still empty after adding new urls, it means no new urls are found,
+                // the whole crawling process has to stop
+                // how???
+            }
+            // the ratio between new url count and new thread count
+            final double THREAD_RATIO = 1;
+            final int MAX_THREAD_LIMIT = 1000;
+            int newThreadCount = (int)(urlQueue.size() * THREAD_RATIO);
+            int activeThreadCount = Crawling.getActiveThreadCount();
+            newThreadCount = Math.min(newThreadCount, MAX_THREAD_LIMIT - activeThreadCount);
+            if (newThreadCount > 0) {
+                Thread[] threads = new Thread[newThreadCount];
+                for (int i = 0; i < newThreadCount; i++) {
+                    threads[i] = new Thread(new Crawling(totalThreadCount + 1, savePath));
+                    // run the thread after creation
+                    threads[i].start();
+                    totalThreadCount++;
+                }
+            }
         }
     }
 
@@ -110,61 +131,54 @@ public class Crawler {
      */
     @SuppressWarnings("unchecked")
     private static void addToUrlQueue(String savePath) {
-        synchronized (INTERNAL_HASHMAP_LOCK) {
-            if (!urlQueue.isEmpty()) {
-                return;
+        for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
+            // make a separate directory for the external hashsets, if haven't
+            String dirPath = savePath + "HashSets" + File.separator;
+            File dir = new File(dirPath);
+            if (!dir.exists()) {
+                dir.mkdir();
             }
-            for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
-                // make a separate directory for the external hashsets, if haven't
-                String dirPath = savePath + "HashSets" + File.separator;
-                File dir = new File(dirPath);
-                if (!dir.exists()) {
-                    dir.mkdir();
-                }
-                // index corresponds to the id of the external hashset
-                int index = entry.getKey();
-                String externalName = "External" + index + ".ser";
-                File file = new File(dirPath + externalName);
-                HashSet<URL> internalHashSet = entry.getValue();
-                HashSet<URL> externalHashSet = null;
-                if (file.exists()) {
-                    // load external hashset
-                    try {
-                        FileInputStream fis = new FileInputStream(dirPath + externalName);
-                        ObjectInputStream ois = new ObjectInputStream(fis);
-                        externalHashSet = (HashSet<URL>) ois.readObject();
-                        ois.close();
-                    } catch (IOException e) {
-                        // ignore or add something?
-                    } catch (ClassNotFoundException e) {
-                        // ignore or add something?
-                    }
-                }
-                // if the external hashset does not exist, create one
-                // but if it exists but fails to load, should overwrite it?
-                if (externalHashSet == null) {
-                    externalHashSet = new HashSet<URL>();
-                }
-                // iterate through the internal hashset, if the url is duplicated, just ignore,
-                // if the url is new, add it to both the queue and external hashset
-                for (URL url: internalHashSet) {
-                    if (!externalHashSet.contains(url)) {
-                        externalHashSet.add(url);
-                        urlQueue.add(url);
-                    }
-                }
-                // save external hashset back
+            // index corresponds to the id of the external hashset
+            int index = entry.getKey();
+            String externalName = "External" + index + ".ser";
+            File file = new File(dirPath + externalName);
+            HashSet<URL> internalHashSet = entry.getValue();
+            HashSet<URL> externalHashSet = null;
+            if (file.exists()) {
+                // load external hashset
                 try {
-                    FileOutputStream fos = new FileOutputStream(dirPath + externalName);
-                    ObjectOutputStream oos = new ObjectOutputStream(fos);
-                    oos.writeObject(externalHashSet);
-                    oos.close();
+                    FileInputStream fis = new FileInputStream(dirPath + externalName);
+                    ObjectInputStream ois = new ObjectInputStream(fis);
+                    externalHashSet = (HashSet<URL>) ois.readObject();
+                    ois.close();
                 } catch (IOException e) {
+                    // ignore or add something?
+                } catch (ClassNotFoundException e) {
                     // ignore or add something?
                 }
             }
-            // must clear the internal hashmap after this
-            internalHashMap.clear();
+            // if the external hashset does not exist, create one
+            // but if it exists but fails to load, should overwrite it?
+            if (externalHashSet == null) {
+                externalHashSet = new HashSet<URL>();
+            }
+            // iterate through the internal hashset, if the url is duplicated, just ignore,
+            // if the url is new, add it to both the queue and external hashset
+            for (URL url: internalHashSet) {
+                if (!externalHashSet.contains(url)) {
+                    externalHashSet.add(url);
+                    urlQueue.add(url);
+                }
+            }
+            // save external hashset back
+            try {
+                FileOutputStream fos = new FileOutputStream(dirPath + externalName);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(externalHashSet);
+                oos.close();
+            } catch (IOException e) {
+                // ignore or add something?
+            }
         }
     }
 
@@ -172,6 +186,7 @@ public class Crawler {
      * The run() method in this class specifies what each thread is doing
      */
     private static class Crawling implements Runnable {
+        private static int activeThreadCount = 0;
         private int threadID;
         private String savePath;
 
@@ -182,47 +197,51 @@ public class Crawler {
 
         public void run() {
             System.out.println("thread " + threadID + " started");
+            activeThreadCount++;
             URL url = null;
-            while (pageCount < searchLimit) {
-                // if use urlQueue.isEmpty() and urlQueue.poll() separately,
-                // may have concurrency issue
-                while (pageCount < searchLimit && (url = urlQueue.poll()) != null) {
-                    if (!isRobotSafe(url)) {
+            // if use urlQueue.isEmpty() and urlQueue.poll() separately,
+            // may have concurrency issue
+            while (pageCount < searchLimit && (url = urlQueue.poll()) != null) {
+                if (!isRobotSafe(url)) {
+                    continue;
+                }
+                String page = getPage(url);
+                // page equals empty indicates the page was not processed successfully
+                // because of various reasons detailed in getPage() method
+                if (page.equals("")) {
+                    continue;
+                }
+                // use count as the file name, and only when the page is saved successfully,
+                // the count increments
+                synchronized (PAGE_COUNT_LOCK) {
+                    try {
+                        savePage(page, savePath, (pageCount + 1) + "");
+                    } catch (IOException e) {
                         continue;
                     }
-                    String page = getPage(url);
-                    // page equals empty indicates the page was not processed successfully
-                    // because of various reasons detailed in getPage() method
-                    if (page.equals("")) {
-                        continue;
-                    }
-                    // use count as the file name, and only when the page is saved successfully,
-                    // the count increments
-                    synchronized (PAGE_COUNT_LOCK) {
-                        try {
-                            savePage(page, savePath, (pageCount + 1) + "");
-                        } catch (IOException e) {
-                            continue;
-                        }
-                        pageCount++;
-                        System.out.println("thread " + threadID + " downloaded page " + pageCount);
-                    }
-                    indexPage(page);
-                    List<URL> newUrls = extractUrl(url, page);
-                    for (URL newUrl: newUrls) {
-                        // if newUrl is duplicated in the internal hashmap, it will be ignored
-                        // by addToInternalHashMap(newUrl), and when the next round of crawling first
-                        // begins, the urls in internal hashmap will also be checked against external hashset
-                        addToInternalHashMap(newUrl);
-                    }
+                    pageCount++;
+                    System.out.println("thread " + threadID + " downloaded page " + pageCount);
                 }
-                if (pageCount >= searchLimit) {
-                    System.out.println("thread " + threadID + " terminated because search limit is reached");
-                    return;
+                indexPage(page);
+                List<URL> newUrls = extractUrl(url, page);
+                for (URL newUrl: newUrls) {
+                    // if newUrl is duplicated in the internal hashmap, it will be ignored
+                    // by addToInternalHashMap(newUrl), and when the next round of crawling first
+                    // begins, the urls in internal hashmap will also be checked against external hashset
+                    addToInternalHashMap(newUrl);
                 }
-                System.out.println("thread " + threadID + " paused because queue of the current round is empty");
-                addToUrlQueue(savePath);
             }
+            if (pageCount >= searchLimit) {
+                System.out.println("thread " + threadID + " terminated because search limit is reached");
+            }
+            else {
+                System.out.println("thread " + threadID + " terminated because queue of the current round is empty");
+            }
+            activeThreadCount--;
+        }
+
+        public static int getActiveThreadCount() {
+            return activeThreadCount;
         }
     }
 
@@ -301,8 +320,6 @@ public class Crawler {
             // try opening the URL
             URLConnection urlConnection = url.openConnection();
             urlConnection.setAllowUserInteraction(false);
-            urlConnection.setConnectTimeout(5000);
-            urlConnection.setReadTimeout(5000);
             HttpURLConnection http = (HttpURLConnection)urlConnection;
             String type = http.getContentType();
             // reference: https://www.w3.org/Protocols/rfc1341/4_Content-Type.html
@@ -495,4 +512,5 @@ public class Crawler {
             }
         }
     }
+
 }
