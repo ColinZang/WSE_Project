@@ -4,7 +4,6 @@
     <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" afterPath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/WebCrawler/README.md" afterPath="$PROJECT_DIR$/src/WebCrawler/README.md" />
     </list>
     <ignored path="WSE_Project.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -29,11 +28,10 @@
       <file leaf-file-name="Crawler.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="57">
-              <caret line="58" column="18" selection-start-line="58" selection-start-column="18" selection-end-line="58" selection-end-column="18" />
+            <state relative-caret-position="-120">
+              <caret line="327" column="40" selection-start-line="327" selection-start-column="40" selection-end-line="327" selection-end-column="40" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#3550#3580#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -76,7 +74,7 @@
   <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="1280" />
-    <option name="height" value="736" />
+    <option name="height" value="717" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="false">
     <OptionsSetting value="true" id="Add" />
@@ -155,8 +153,8 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
       <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="Scratches" />
     </panes>
   </component>
@@ -446,11 +444,25 @@
       <option name="project" value="LOCAL" />
       <updated>1459996135967</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Modified Crawling class and Crawl method">
+      <created>1460011062192</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1460011062192</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Modified Crawling class and Crawl method">
+      <created>1460011210078</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1460011210078</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1280" height="736" extended-state="6" />
+    <frame x="0" y="23" width="1280" height="717" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -486,7 +498,8 @@
     <MESSAGE value="Added synchronization for addToInternalHashMap method" />
     <MESSAGE value="Added methods about page processing" />
     <MESSAGE value="Added methods for crawler" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added methods for crawler" />
+    <MESSAGE value="Modified Crawling class and Crawl method" />
+    <option name="LAST_COMMIT_MESSAGE" value="Modified Crawling class and Crawl method" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -499,7 +512,6 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#3550#3580#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -518,7 +530,6 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#3550#3580#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -552,7 +563,16 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#3550#3580#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-120">
+          <caret line="327" column="40" selection-start-line="327" selection-start-column="40" selection-end-line="327" selection-end-column="40" />
+          <folding>
+            <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -562,17 +582,6 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="57">
-          <caret line="58" column="18" selection-start-line="58" selection-start-column="18" selection-end-line="58" selection-end-column="18" />
-          <folding>
-            <element signature="imports" expanded="true" />
-            <element signature="e#3550#3580#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>

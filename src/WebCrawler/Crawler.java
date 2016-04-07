@@ -77,6 +77,12 @@ public class Crawler {
      */
     private static void crawl(String savePath) {
         setProxy();
+        // make a separate directory for the external hashsets
+        String dirPath = savePath + "HashSets" + File.separator;
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
         addToUrlQueue(savePath);
         final int THREAD_COUNT = 1500;
         Thread[] threads = new Thread[THREAD_COUNT];
@@ -88,7 +94,7 @@ public class Crawler {
     }
 
     /**
-     * This method sets proxy and ports here, behind a firewall
+     * This method sets proxy and ports here, behind a firewall, and sets timeout
      */
     private static void setProxy() {
         Properties props= new Properties(System.getProperties());
@@ -97,6 +103,9 @@ public class Crawler {
         props.put("http.proxyPort", "8080");
         Properties newprops = new Properties(props);
         System.setProperties(newprops);
+        final int TIMEOUT = 10000;
+        System.setProperty("sun.net.client.defaultConnectTimeout", TIMEOUT + "");
+        System.setProperty("sun.net.client.defaultReadTimeout", TIMEOUT + "");
     }
 
     /**
@@ -106,16 +115,14 @@ public class Crawler {
     @SuppressWarnings("unchecked")
     private static void addToUrlQueue(String savePath) {
         synchronized (INTERNAL_HASHMAP_LOCK) {
+            // although this method is only called when urlQueue is empty, it may be possible
+            // that the urlQueue just became non-empty, in this case the thread should return,
+            // because there's no need to frequently update the urlQueue, as I/O is expensive
             if (!urlQueue.isEmpty()) {
                 return;
             }
             for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
-                // make a separate directory for the external hashsets, if haven't
                 String dirPath = savePath + "HashSets" + File.separator;
-                File dir = new File(dirPath);
-                if (!dir.exists()) {
-                    dir.mkdir();
-                }
                 // index corresponds to the id of the external hashset
                 int index = entry.getKey();
                 String externalName = "External" + index + ".ser";
@@ -129,10 +136,11 @@ public class Crawler {
                         ObjectInputStream ois = new ObjectInputStream(fis);
                         externalHashSet = (HashSet<URL>) ois.readObject();
                         ois.close();
+                        System.out.println("Load external hashset " + index + " successfully");
                     } catch (IOException e) {
-                        // ignore or add something?
+                        System.out.println("Load external hashset " + index + " not successfully");
                     } catch (ClassNotFoundException e) {
-                        // ignore or add something?
+                        System.out.println("Load external hashset " + index + " not successfully");
                     }
                 }
                 // if the external hashset does not exist, create one
@@ -154,8 +162,9 @@ public class Crawler {
                     ObjectOutputStream oos = new ObjectOutputStream(fos);
                     oos.writeObject(externalHashSet);
                     oos.close();
+                    System.out.println("Save external hashset " + index + " successfully");
                 } catch (IOException e) {
-                    // ignore or add something?
+                    System.out.println("Save external hashset " + index + " not successfully");
                 }
             }
             // must clear the internal hashmap after this
@@ -215,6 +224,11 @@ public class Crawler {
                     System.out.println("thread " + threadID + " terminated because search limit is reached");
                     return;
                 }
+                // if the urlQueue becomes empty, the thread will actively initiate moving urls from internal
+                // hashmap to urlQueue, by calling addToUrlQueue(). The first thread which gets the lock
+                // will make the urlQueue non-empty, but the other threads which are already waiting still have
+                // to call addToUrlQueue() before returning to crawl, because there's no way for them to know
+                // the urlQueue becomes non-empty. Is there a better way?
                 System.out.println("thread " + threadID + " paused because queue of the current round is empty");
                 addToUrlQueue(savePath);
             }
@@ -296,13 +310,16 @@ public class Crawler {
             // try opening the URL
             URLConnection urlConnection = url.openConnection();
             urlConnection.setAllowUserInteraction(false);
-            urlConnection.setConnectTimeout(5000);
-            urlConnection.setReadTimeout(5000);
             HttpURLConnection http = (HttpURLConnection)urlConnection;
-            String type = http.getContentType();
+            String type = null;
+            if (http != null) {
+                type = http.getContentType();
+            }
             // reference: https://www.w3.org/Protocols/rfc1341/4_Content-Type.html
-            // only get text type now, may add more permitted types later
-            if (type == null || !type.toLowerCase().startsWith("text")) {
+            // only get text type now, may add more allowed types later
+            // how to handle type == null? Allow them now because pages with type == null
+            // seems all to be textual type actually
+            if (type != null && !type.toLowerCase().startsWith("text")) {
                 return "";
             }
             InputStream urlStream = urlConnection.getInputStream();
@@ -336,21 +353,8 @@ public class Crawler {
                     }
                 }
                 numRead = urlStream.read(b);
-            }
-            if (notKnownIfEnglish) {
-                // if the language tag does not exist, count non-ASCII characters
-                int count = 0;
-                // arbitrary threshold
-                final double THRESHOLD = 0.5;
-                for (int i = 0; i < content.length(); i++) {
-                    //if the current char is non-ASCII
-                    if (content.charAt(i) > 127) {
-                        count++;
-                    }
-                    if (count > content.length() * THRESHOLD) {
-                        return "";
-                    }
-                }
+                // if lang tag does not exist, allow them. It seems that counting foreign characters
+                // does not work well
             }
             return content;
         } catch (IOException e) {
