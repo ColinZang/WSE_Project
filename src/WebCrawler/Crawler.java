@@ -17,7 +17,7 @@ public class Crawler {
     private static int pageCount = 0;
     private static final Object PAGE_COUNT_LOCK = new Object();
     private static final int EXTERNAL_HASHSET_COUNT = 100;
-    private static final Object[] EXTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
+    private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
 
     /**
      * This method takes the input file Scanner and
@@ -35,7 +35,7 @@ public class Crawler {
      */
     private static void initialize(Scanner readFile) {
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
-            EXTERNAL_HASHSET_LOCK[i] = new Object[i];
+            INTERNAL_HASHSET_LOCK[i] = new Object[i];
         }
         while (readFile.hasNextLine()) {
             try {
@@ -55,7 +55,7 @@ public class Crawler {
     private static void addToInternalHashMap(URL url) {
         int hashValue = hash(url);
         HashSet<URL> hashSet = null;
-        synchronized (EXTERNAL_HASHSET_LOCK[hashValue]) {
+        synchronized (INTERNAL_HASHSET_LOCK[hashValue]) {
             if (internalHashMap.containsKey(hashValue)) {
                 hashSet = internalHashMap.get(hashValue);
             }
@@ -113,10 +113,10 @@ public class Crawler {
      */
     @SuppressWarnings("unchecked")
     private static void addToUrlQueue(String savePath) {
-        // only randomly pick one, instead of iterating over the hashmap, so after this,
-        // the urlQueue.isEmpty() may still be true
+        // only randomly pick one index, instead of iterating over the whole hashmap,
+        // so after this, urlQueue.isEmpty() may still be true, but more threads will come
         int index = (int)(Math.random() * EXTERNAL_HASHSET_COUNT);
-            synchronized (EXTERNAL_HASHSET_LOCK[index]) {
+            synchronized (INTERNAL_HASHSET_LOCK[index]) {
                 if (!urlQueue.isEmpty()) {
                     return;
                 }
@@ -166,6 +166,7 @@ public class Crawler {
                 } catch (IOException e) {
                     System.out.println("Save external hashset " + index + " not successfully");
                 }
+                // remove the current hashSet, not clear the hashmap
                 internalHashMap.remove(index);
             }
     }
