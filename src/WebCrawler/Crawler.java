@@ -16,7 +16,8 @@ public class Crawler {
     private static int searchLimit = 0;
     private static int pageCount = 0;
     private static final Object PAGE_COUNT_LOCK = new Object();
-    private static final Object INTERNAL_HASHMAP_LOCK = new Object();
+    private static final int EXTERNAL_HASHSET_COUNT = 100;
+    private static final Object[] EXTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
 
     /**
      * This method takes the input file Scanner and
@@ -33,6 +34,9 @@ public class Crawler {
      * The input file should have each url in a new line
      */
     private static void initialize(Scanner readFile) {
+        for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
+            EXTERNAL_HASHSET_LOCK[i] = new Object[i];
+        }
         while (readFile.hasNextLine()) {
             try {
                 URL url = new URL(readFile.nextLine());
@@ -51,7 +55,7 @@ public class Crawler {
     private static void addToInternalHashMap(URL url) {
         int hashValue = hash(url);
         HashSet<URL> hashSet = null;
-        synchronized (INTERNAL_HASHMAP_LOCK) {
+        synchronized (EXTERNAL_HASHSET_LOCK[hashValue]) {
             if (internalHashMap.containsKey(hashValue)) {
                 hashSet = internalHashMap.get(hashValue);
             }
@@ -67,7 +71,6 @@ public class Crawler {
      * This method calculates the hashCode of a url
      */
     private static int hash(URL url) {
-        final int EXTERNAL_HASHSET_COUNT = 100;
         return Math.abs(url.toString().hashCode()) % EXTERNAL_HASHSET_COUNT;
     }
 
@@ -110,20 +113,21 @@ public class Crawler {
      */
     @SuppressWarnings("unchecked")
     private static void addToUrlQueue(String savePath) {
-        synchronized (INTERNAL_HASHMAP_LOCK) {
-            // although this method is only called when urlQueue is empty, it may be possible
-            // that the urlQueue just became non-empty, in this case the thread should return,
-            // because there's no need to frequently update the urlQueue, as I/O is expensive
-            if (!urlQueue.isEmpty()) {
-                return;
-            }
-            for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
+        // only randomly pick one, instead of iterating over the hashmap, so after this,
+        // the urlQueue.isEmpty() may still be true
+        int index = (int)(Math.random() * EXTERNAL_HASHSET_COUNT);
+            synchronized (EXTERNAL_HASHSET_LOCK[index]) {
+                if (!urlQueue.isEmpty()) {
+                    return;
+                }
+                if (!internalHashMap.containsKey(index)) {
+                    return;
+                }
                 String dirPath = savePath + "HashSets" + File.separator;
                 // index corresponds to the id of the external hashset
-                int index = entry.getKey();
                 String externalName = "External" + index + ".ser";
                 File file = new File(dirPath + externalName);
-                HashSet<URL> internalHashSet = entry.getValue();
+                HashSet<URL> internalHashSet = internalHashMap.get(index);
                 HashSet<URL> externalHashSet = null;
                 if (file.exists()) {
                     // load external hashset
@@ -132,7 +136,7 @@ public class Crawler {
                         ObjectInputStream ois = new ObjectInputStream(fis);
                         externalHashSet = (HashSet<URL>) ois.readObject();
                         ois.close();
-                        System.out.println("Load external hashset " + index + " successfully");
+                        //System.out.println("Load external hashset " + index + " successfully");
                     } catch (IOException e) {
                         System.out.println("Load external hashset " + index + " not successfully");
                     } catch (ClassNotFoundException e) {
@@ -158,14 +162,12 @@ public class Crawler {
                     ObjectOutputStream oos = new ObjectOutputStream(fos);
                     oos.writeObject(externalHashSet);
                     oos.close();
-                    System.out.println("Save external hashset " + index + " successfully");
+                    //System.out.println("Save external hashset " + index + " successfully");
                 } catch (IOException e) {
                     System.out.println("Save external hashset " + index + " not successfully");
                 }
+                internalHashMap.remove(index);
             }
-            // must clear the internal hashmap after this
-            internalHashMap.clear();
-        }
     }
 
     /**
@@ -220,12 +222,6 @@ public class Crawler {
                     System.out.println("thread " + threadID + " terminated because search limit is reached");
                     return;
                 }
-                // if the urlQueue becomes empty, the thread will actively initiate moving urls from internal
-                // hashmap to urlQueue, by calling addToUrlQueue(). The first thread which gets the lock
-                // will make the urlQueue non-empty, but the other threads which are already waiting still have
-                // to call addToUrlQueue() before returning to crawl, because there's no way for them to know
-                // the urlQueue becomes non-empty. Is there a better way?
-                System.out.println("thread " + threadID + " paused because queue of the current round is empty");
                 addToUrlQueue(savePath);
             }
         }
@@ -454,7 +450,7 @@ public class Crawler {
         }
 
         public URL poll() {
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 100; i++) {
                 int index = (int)(Math.random() * LIST_COUNT);
                 synchronized (LIST_LOCK[index]) {
                     LinkedList<URL> current = listMap.get(index);
@@ -465,7 +461,7 @@ public class Crawler {
                     }
                 }
             }
-            // if a thread tries ten times but does not get a url,
+            // if a thread tries 100 times but does not get a url,
             // consider the whole queue to be empty
             isEmpty = true;
             return null;

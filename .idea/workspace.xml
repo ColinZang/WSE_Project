@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="">
+    <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="1. Added UrlQueue class, 2. Modified extractUrl() to parse faster">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" afterPath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" />
     </list>
@@ -28,13 +28,17 @@
       <file leaf-file-name="Crawler.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="45">
-              <caret line="452" column="13" selection-start-line="452" selection-start-column="13" selection-end-line="452" selection-end-column="13" />
+            <state relative-caret-position="425">
+              <caret line="131" column="36" selection-start-line="131" selection-start-column="36" selection-end-line="131" selection-end-column="36" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#18159#18185#0" expanded="true" />
-                <element signature="e#18494#18495#0" expanded="true" />
-                <element signature="e#18532#18533#0" expanded="true" />
+                <element signature="e#410#433#0" expanded="true" />
+                <element signature="e#2478#2479#0" expanded="true" />
+                <element signature="e#2561#2562#0" expanded="true" />
+                <element signature="e#3862#3892#0" expanded="true" />
+                <element signature="e#17581#17607#0" expanded="true" />
+                <element signature="e#17916#17917#0" expanded="true" />
+                <element signature="e#17954#17955#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -468,7 +472,14 @@
       <option name="project" value="LOCAL" />
       <updated>1460056095051</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="1. Added UrlQueue class, 2. Modified extractUrl() to parse faster">
+      <created>1460074299239</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1460074299239</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -510,7 +521,8 @@
     <MESSAGE value="Added methods for crawler" />
     <MESSAGE value="Modified Crawling class and Crawl method" />
     <MESSAGE value="1. Modified getPage() to allow pages with ContentType == null, 2. Modified getPage() to remove non-English character counting, 3. Change connection timeout length" />
-    <option name="LAST_COMMIT_MESSAGE" value="1. Modified getPage() to allow pages with ContentType == null, 2. Modified getPage() to remove non-English character counting, 3. Change connection timeout length" />
+    <MESSAGE value="1. Added UrlQueue class, 2. Modified extractUrl() to parse faster" />
+    <option name="LAST_COMMIT_MESSAGE" value="1. Added UrlQueue class, 2. Modified extractUrl() to parse faster" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -523,9 +535,13 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#18159#18185#0" expanded="true" />
-            <element signature="e#18494#18495#0" expanded="true" />
-            <element signature="e#18532#18533#0" expanded="true" />
+            <element signature="e#410#433#0" expanded="true" />
+            <element signature="e#2478#2479#0" expanded="true" />
+            <element signature="e#2561#2562#0" expanded="true" />
+            <element signature="e#3862#3892#0" expanded="true" />
+            <element signature="e#17581#17607#0" expanded="true" />
+            <element signature="e#17916#17917#0" expanded="true" />
+            <element signature="e#17954#17955#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -544,9 +560,13 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#18159#18185#0" expanded="true" />
-            <element signature="e#18494#18495#0" expanded="true" />
-            <element signature="e#18532#18533#0" expanded="true" />
+            <element signature="e#410#433#0" expanded="true" />
+            <element signature="e#2478#2479#0" expanded="true" />
+            <element signature="e#2561#2562#0" expanded="true" />
+            <element signature="e#3862#3892#0" expanded="true" />
+            <element signature="e#17581#17607#0" expanded="true" />
+            <element signature="e#17916#17917#0" expanded="true" />
+            <element signature="e#17954#17955#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -580,22 +600,30 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#18159#18185#0" expanded="true" />
-            <element signature="e#18494#18495#0" expanded="true" />
-            <element signature="e#18532#18533#0" expanded="true" />
+            <element signature="e#410#433#0" expanded="true" />
+            <element signature="e#2478#2479#0" expanded="true" />
+            <element signature="e#2561#2562#0" expanded="true" />
+            <element signature="e#3862#3892#0" expanded="true" />
+            <element signature="e#17581#17607#0" expanded="true" />
+            <element signature="e#17916#17917#0" expanded="true" />
+            <element signature="e#17954#17955#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="45">
-          <caret line="452" column="13" selection-start-line="452" selection-start-column="13" selection-end-line="452" selection-end-column="13" />
+        <state relative-caret-position="425">
+          <caret line="131" column="36" selection-start-line="131" selection-start-column="36" selection-end-line="131" selection-end-column="36" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#18159#18185#0" expanded="true" />
-            <element signature="e#18494#18495#0" expanded="true" />
-            <element signature="e#18532#18533#0" expanded="true" />
+            <element signature="e#410#433#0" expanded="true" />
+            <element signature="e#2478#2479#0" expanded="true" />
+            <element signature="e#2561#2562#0" expanded="true" />
+            <element signature="e#3862#3892#0" expanded="true" />
+            <element signature="e#17581#17607#0" expanded="true" />
+            <element signature="e#17916#17917#0" expanded="true" />
+            <element signature="e#17954#17955#0" expanded="true" />
           </folding>
         </state>
       </provider>
