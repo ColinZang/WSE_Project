@@ -18,6 +18,9 @@ public class Crawler {
     private static final Object PAGE_COUNT_LOCK = new Object();
     private static final Object INTERNAL_HASHMAP_LOCK = new Object();
 
+    private static final String USAGE = "USAGE: java Crawler [-root rootURLFile] [-path savePath] [-max searchLimit]";   // (by Chen Chen)
+    private static final int EXTERNAL_HASHSET_COUNT = 100;      // (by Chen Chen)
+
     /**
      * This method takes the input file Scanner and
      * the path to save the results
@@ -51,6 +54,9 @@ public class Crawler {
     private static void addToInternalHashMap(URL url) {
         int hashValue = hash(url);
         HashSet<URL> hashSet = null;
+        // in my opinion, there is no need to lock internalHashMap here,
+        // otherwise, it will decrease the performance of ConcurrentHashMap
+        // we only need lock hashset in else statement, which can improce speed (by Chen Chen)
         synchronized (INTERNAL_HASHMAP_LOCK) {
             if (internalHashMap.containsKey(hashValue)) {
                 hashSet = internalHashMap.get(hashValue);
@@ -67,7 +73,6 @@ public class Crawler {
      * This method calculates the hashCode of a url
      */
     private static int hash(URL url) {
-        final int EXTERNAL_HASHSET_COUNT = 100;
         return Math.abs(url.toString().hashCode()) % EXTERNAL_HASHSET_COUNT;
     }
 
@@ -479,15 +484,25 @@ public class Crawler {
         } catch (InterruptedException e) {
             // ignore
         }
-        String usage = "usage: java Crawler [-root rootURLFile] [-path savePath] [-max searchLimit]";
+
         final int ARG_COUNT = 6;
         if (args.length != ARG_COUNT) {
-            System.out.println(usage);
+            System.out.println(USAGE);
             System.exit(1);
         }
+
         Scanner readFile = null;
         String savePath = null;
+
+        paramAnalysis(args, readFile, savePath);
+
+        run(readFile, savePath);
+    }
+
+    // command line parameters analysis
+    protected static void paramAnalysis(String[] args, Scanner readFile, String savePath) {
         int index = 0;
+
         while (index < args.length) {
             if (args[index].equals("-root")) {
                 try {
@@ -501,7 +516,7 @@ public class Crawler {
             else if (args[index].equals("-path")) {
                 savePath = args[index + 1];
                 if (savePath == null) {
-                    System.out.println(usage);
+                    System.out.println(USAGE);
                     System.exit(1);
                 }
                 final Path docDir = Paths.get(savePath);
@@ -529,10 +544,10 @@ public class Crawler {
                 }
             }
             else {
-                System.out.println(usage);
+                System.out.println(USAGE);
                 System.exit(1);
             }
         }
-        run(readFile, savePath);
     }
+
 }
