@@ -6,12 +6,11 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Crawler {
-    private static ConcurrentLinkedQueue<URL> urlQueue =
-            new ConcurrentLinkedQueue<URL>();
+    private static UrlQueue urlQueue =
+            new UrlQueue();
     private static ConcurrentHashMap<Integer, HashSet<URL>> internalHashMap =
             new ConcurrentHashMap<Integer, HashSet<URL>>();
     private static int searchLimit = 0;
@@ -82,6 +81,12 @@ public class Crawler {
      */
     private static void crawl(String savePath) {
         setProxy();
+        // make a separate directory for the external hashsets
+        String dirPath = savePath + "HashSets" + File.separator;
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
         addToUrlQueue(savePath);
         final int THREAD_COUNT = 1500;
         Thread[] threads = new Thread[THREAD_COUNT];
@@ -111,16 +116,14 @@ public class Crawler {
     @SuppressWarnings("unchecked")
     private static void addToUrlQueue(String savePath) {
         synchronized (INTERNAL_HASHMAP_LOCK) {
+            // although this method is only called when urlQueue is empty, it may be possible
+            // that the urlQueue just became non-empty, in this case the thread should return,
+            // because there's no need to frequently update the urlQueue, as I/O is expensive
             if (!urlQueue.isEmpty()) {
                 return;
             }
             for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
-                // make a separate directory for the external hashsets, if haven't
                 String dirPath = savePath + "HashSets" + File.separator;
-                File dir = new File(dirPath);
-                if (!dir.exists()) {
-                    dir.mkdir();
-                }
                 // index corresponds to the id of the external hashset
                 int index = entry.getKey();
                 String externalName = "External" + index + ".ser";
@@ -134,10 +137,11 @@ public class Crawler {
                         ObjectInputStream ois = new ObjectInputStream(fis);
                         externalHashSet = (HashSet<URL>) ois.readObject();
                         ois.close();
+                        System.out.println("Load external hashset " + index + " successfully");
                     } catch (IOException e) {
-                        // ignore or add something?
+                        System.out.println("Load external hashset " + index + " not successfully");
                     } catch (ClassNotFoundException e) {
-                        // ignore or add something?
+                        System.out.println("Load external hashset " + index + " not successfully");
                     }
                 }
                 // if the external hashset does not exist, create one
@@ -159,8 +163,9 @@ public class Crawler {
                     ObjectOutputStream oos = new ObjectOutputStream(fos);
                     oos.writeObject(externalHashSet);
                     oos.close();
+                    System.out.println("Save external hashset " + index + " successfully");
                 } catch (IOException e) {
-                    // ignore or add something?
+                    System.out.println("Save external hashset " + index + " not successfully");
                 }
             }
             // must clear the internal hashmap after this
@@ -220,6 +225,11 @@ public class Crawler {
                     System.out.println("thread " + threadID + " terminated because search limit is reached");
                     return;
                 }
+                // if the urlQueue becomes empty, the thread will actively initiate moving urls from internal
+                // hashmap to urlQueue, by calling addToUrlQueue(). The first thread which gets the lock
+                // will make the urlQueue non-empty, but the other threads which are already waiting still have
+                // to call addToUrlQueue() before returning to crawl, because there's no way for them to know
+                // the urlQueue becomes non-empty. Is there a better way?
                 System.out.println("thread " + threadID + " paused because queue of the current round is empty");
                 addToUrlQueue(savePath);
             }
@@ -297,17 +307,23 @@ public class Crawler {
      * (4) ...
      */
     private static String getPage(URL url) {
+        long startTime = System.currentTimeMillis();
         try {
             // try opening the URL
             URLConnection urlConnection = url.openConnection();
-            urlConnection.setAllowUserInteraction(false);
             urlConnection.setConnectTimeout(5000);
             urlConnection.setReadTimeout(5000);
+            urlConnection.setAllowUserInteraction(false);
             HttpURLConnection http = (HttpURLConnection)urlConnection;
-            String type = http.getContentType();
+            String type = null;
+            if (http != null) {
+                type = http.getContentType();
+            }
             // reference: https://www.w3.org/Protocols/rfc1341/4_Content-Type.html
-            // only get text type now, may add more permitted types later
-            if (type == null || !type.toLowerCase().startsWith("text")) {
+            // only get text type now, may add more allowed types later
+            // how to handle type == null? Allow them now because pages with type == null
+            // seems all to be textual type actually
+            if (type != null && !type.toLowerCase().startsWith("text")) {
                 return "";
             }
             InputStream urlStream = urlConnection.getInputStream();
@@ -320,42 +336,30 @@ public class Crawler {
             boolean notKnownIfEnglish = true;
             while ((numRead != -1) ) {
                 String newContent = new String(b, 0, numRead);
-                content += newContent;
                 // check if the page is in English right now,
                 // and stop downloading immediately if not
                 // notknownIfEnglish == false indicates already knowing it's in English
+                // only check newContent for efficiency
                 if (notKnownIfEnglish) {
-                    int index = content.indexOf("lang=\"");
+                    int index = newContent.indexOf("lang=\"");
                     // if the tag exists
                     if (index != -1) {
                         index += 6;
-                        if (index + 2 <= content.length() && content.substring(index, index + 2).equals("en")) {
+                        if (index + 2 <= newContent.length() && newContent.substring(index, index + 2).equals("en")) {
                             notKnownIfEnglish = false;
                         }
                         // lang==some other language, return
-                        else if (index + 2 <= content.length()) {
+                        else if (index + 2 <= newContent.length()) {
                             return "";
                         }
-                        // if index + 2 > content.length(), it means the tag happens to be in the middle,
-                        // wait till next round to see
+                        // if index + 2 > newContent.length(), it means the tag happens to be in the middle
+                        // may have some mistakes, ignore? is there a better way?
                     }
                 }
+                content += newContent;
                 numRead = urlStream.read(b);
-            }
-            if (notKnownIfEnglish) {
-                // if the language tag does not exist, count non-ASCII characters
-                int count = 0;
-                // arbitrary threshold
-                final double THRESHOLD = 0.5;
-                for (int i = 0; i < content.length(); i++) {
-                    //if the current char is non-ASCII
-                    if (content.charAt(i) > 127) {
-                        count++;
-                    }
-                    if (count > content.length() * THRESHOLD) {
-                        return "";
-                    }
-                }
+                // if lang tag does not exist, allow them. It seems that counting foreign characters
+                // does not work well
             }
             return content;
         } catch (IOException e) {
@@ -389,25 +393,26 @@ public class Crawler {
      */
     private static List<URL> extractUrl(URL url, String page) {
         List<URL> results = new ArrayList<URL>();
-        // Page in lower case
-        String lcPage = page.toLowerCase();
         // position in page
         int index = 0;
+        int newIndex = 0;
         int iEndAngle, ihref, iURL, iCloseQuote, iHatchMark, iEnd;
-        while ((index = lcPage.indexOf("<a", index)) != -1) {
-            iEndAngle = lcPage.indexOf(">", index);
-            ihref = lcPage.indexOf("href", index);
-            if (ihref != -1) {
-                iURL = lcPage.indexOf("\"", ihref) + 1;
+        while ((newIndex = page.indexOf("<a", index)) != -1
+                || (newIndex = page.indexOf("<A", index)) != -1) {
+            index = newIndex;
+            iEndAngle = page.indexOf(">", index);
+            if ((ihref = page.indexOf("href", index)) != -1
+                    || (ihref = page.indexOf("HREF", index)) != -1) {
+                iURL = page.indexOf("\"", ihref) + 1;
                 if ((iURL != -1) && (iEndAngle != -1) && (iURL < iEndAngle)) {
-                    iCloseQuote = lcPage.indexOf("\"", iURL);
-                    iHatchMark = lcPage.indexOf("#", iURL);
+                    iCloseQuote = page.indexOf("\"", iURL);
+                    iHatchMark = page.indexOf("#", iURL);
                     if ((iCloseQuote != -1) && (iCloseQuote < iEndAngle)) {
                         iEnd = iCloseQuote;
                         if ((iHatchMark != -1) && (iHatchMark < iCloseQuote)) {
                             iEnd = iHatchMark;
                         }
-                        String newUrlString = page.substring(iURL, iEnd);
+                        String newUrlString = page.substring(iURL, iEnd).toLowerCase();
                         URL newUrl = null;
                         try {
                             newUrl = new URL(url, newUrlString);
@@ -421,6 +426,55 @@ public class Crawler {
             index = iEndAngle;
         }
         return results;
+    }
+
+    /**
+     * This class tries to simulate a concurrent queue
+     */
+    private static class UrlQueue {
+        // it consists of many small queues
+        final int LIST_COUNT = 1000;
+        boolean isEmpty = true;
+        HashMap<Integer, LinkedList<URL>> listMap =
+                new HashMap<Integer, LinkedList<URL>>();
+        private final Object[] LIST_LOCK = new Object[LIST_COUNT];
+
+        public UrlQueue() {
+            for (int i = 0; i < LIST_COUNT; i++) {
+                listMap.put(i, new LinkedList<URL>());
+                LIST_LOCK[i] = new Object();
+            }
+        }
+
+        public boolean isEmpty() {
+            return isEmpty;
+        }
+
+        public void add(URL url) {
+            int index = (int)(Math.random() * LIST_COUNT);
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<URL> current = listMap.get(index);
+                current.add(url);
+            }
+        }
+
+        public URL poll() {
+            for (int i = 0; i < 5; i++) {
+                int index = (int)(Math.random() * LIST_COUNT);
+                synchronized (LIST_LOCK[index]) {
+                    LinkedList<URL> current = listMap.get(index);
+                    URL url = current.poll();
+                    if (url != null) {
+                        isEmpty = false;
+                        return url;
+                    }
+                }
+            }
+            // if a thread tries ten times but does not get a url,
+            // consider the whole queue to be empty
+            isEmpty = true;
+            return null;
+        }
     }
 
     public static void main(String[] args) {
