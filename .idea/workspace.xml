@@ -28,10 +28,13 @@
       <file leaf-file-name="Crawler.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-120">
-              <caret line="327" column="40" selection-start-line="327" selection-start-column="40" selection-end-line="327" selection-end-column="40" />
+            <state relative-caret-position="45">
+              <caret line="452" column="13" selection-start-line="452" selection-start-column="13" selection-end-line="452" selection-end-column="13" />
               <folding>
                 <element signature="imports" expanded="true" />
+                <element signature="e#18159#18185#0" expanded="true" />
+                <element signature="e#18494#18495#0" expanded="true" />
+                <element signature="e#18532#18533#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -458,11 +461,18 @@
       <option name="project" value="LOCAL" />
       <updated>1460011210078</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="1. Modified getPage() to allow pages with ContentType == null, 2. Modified getPage() to remove non-English character counting, 3. Change connection timeout length">
+      <created>1460056095051</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1460056095051</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1280" height="717" extended-state="6" />
+    <frame x="0" y="23" width="1280" height="717" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -471,7 +481,7 @@
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3268366" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32561728" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -499,7 +509,8 @@
     <MESSAGE value="Added methods about page processing" />
     <MESSAGE value="Added methods for crawler" />
     <MESSAGE value="Modified Crawling class and Crawl method" />
-    <option name="LAST_COMMIT_MESSAGE" value="Modified Crawling class and Crawl method" />
+    <MESSAGE value="1. Modified getPage() to allow pages with ContentType == null, 2. Modified getPage() to remove non-English character counting, 3. Change connection timeout length" />
+    <option name="LAST_COMMIT_MESSAGE" value="1. Modified getPage() to allow pages with ContentType == null, 2. Modified getPage() to remove non-English character counting, 3. Change connection timeout length" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -512,6 +523,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#18159#18185#0" expanded="true" />
+            <element signature="e#18494#18495#0" expanded="true" />
+            <element signature="e#18532#18533#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -530,6 +544,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#18159#18185#0" expanded="true" />
+            <element signature="e#18494#18495#0" expanded="true" />
+            <element signature="e#18532#18533#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -563,16 +580,22 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#18159#18185#0" expanded="true" />
+            <element signature="e#18494#18495#0" expanded="true" />
+            <element signature="e#18532#18533#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-120">
-          <caret line="327" column="40" selection-start-line="327" selection-start-column="40" selection-end-line="327" selection-end-column="40" />
+        <state relative-caret-position="45">
+          <caret line="452" column="13" selection-start-line="452" selection-start-column="13" selection-end-line="452" selection-end-column="13" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#18159#18185#0" expanded="true" />
+            <element signature="e#18494#18495#0" expanded="true" />
+            <element signature="e#18532#18533#0" expanded="true" />
           </folding>
         </state>
       </provider>

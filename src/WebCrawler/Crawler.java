@@ -6,12 +6,11 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Crawler {
-    private static ConcurrentLinkedQueue<URL> urlQueue =
-            new ConcurrentLinkedQueue<URL>();
+    private static UrlQueue urlQueue =
+            new UrlQueue();
     private static ConcurrentHashMap<Integer, HashSet<URL>> internalHashMap =
             new ConcurrentHashMap<Integer, HashSet<URL>>();
     private static int searchLimit = 0;
@@ -94,7 +93,7 @@ public class Crawler {
     }
 
     /**
-     * This method sets proxy and ports here, behind a firewall, and sets timeout
+     * This method sets proxy and ports here, behind a firewall
      */
     private static void setProxy() {
         Properties props= new Properties(System.getProperties());
@@ -103,9 +102,6 @@ public class Crawler {
         props.put("http.proxyPort", "8080");
         Properties newprops = new Properties(props);
         System.setProperties(newprops);
-        final int TIMEOUT = 10000;
-        System.setProperty("sun.net.client.defaultConnectTimeout", TIMEOUT + "");
-        System.setProperty("sun.net.client.defaultReadTimeout", TIMEOUT + "");
     }
 
     /**
@@ -306,9 +302,12 @@ public class Crawler {
      * (4) ...
      */
     private static String getPage(URL url) {
+        long startTime = System.currentTimeMillis();
         try {
             // try opening the URL
             URLConnection urlConnection = url.openConnection();
+            urlConnection.setConnectTimeout(5000);
+            urlConnection.setReadTimeout(5000);
             urlConnection.setAllowUserInteraction(false);
             HttpURLConnection http = (HttpURLConnection)urlConnection;
             String type = null;
@@ -332,26 +331,27 @@ public class Crawler {
             boolean notKnownIfEnglish = true;
             while ((numRead != -1) ) {
                 String newContent = new String(b, 0, numRead);
-                content += newContent;
                 // check if the page is in English right now,
                 // and stop downloading immediately if not
                 // notknownIfEnglish == false indicates already knowing it's in English
+                // only check newContent for efficiency
                 if (notKnownIfEnglish) {
-                    int index = content.indexOf("lang=\"");
+                    int index = newContent.indexOf("lang=\"");
                     // if the tag exists
                     if (index != -1) {
                         index += 6;
-                        if (index + 2 <= content.length() && content.substring(index, index + 2).equals("en")) {
+                        if (index + 2 <= newContent.length() && newContent.substring(index, index + 2).equals("en")) {
                             notKnownIfEnglish = false;
                         }
                         // lang==some other language, return
-                        else if (index + 2 <= content.length()) {
+                        else if (index + 2 <= newContent.length()) {
                             return "";
                         }
-                        // if index + 2 > content.length(), it means the tag happens to be in the middle,
-                        // wait till next round to see
+                        // if index + 2 > newContent.length(), it means the tag happens to be in the middle
+                        // may have some mistakes, ignore? is there a better way?
                     }
                 }
+                content += newContent;
                 numRead = urlStream.read(b);
                 // if lang tag does not exist, allow them. It seems that counting foreign characters
                 // does not work well
@@ -388,25 +388,26 @@ public class Crawler {
      */
     private static List<URL> extractUrl(URL url, String page) {
         List<URL> results = new ArrayList<URL>();
-        // Page in lower case
-        String lcPage = page.toLowerCase();
         // position in page
         int index = 0;
+        int newIndex = 0;
         int iEndAngle, ihref, iURL, iCloseQuote, iHatchMark, iEnd;
-        while ((index = lcPage.indexOf("<a", index)) != -1) {
-            iEndAngle = lcPage.indexOf(">", index);
-            ihref = lcPage.indexOf("href", index);
-            if (ihref != -1) {
-                iURL = lcPage.indexOf("\"", ihref) + 1;
+        while ((newIndex = page.indexOf("<a", index)) != -1
+                || (newIndex = page.indexOf("<A", index)) != -1) {
+            index = newIndex;
+            iEndAngle = page.indexOf(">", index);
+            if ((ihref = page.indexOf("href", index)) != -1
+                    || (ihref = page.indexOf("HREF", index)) != -1) {
+                iURL = page.indexOf("\"", ihref) + 1;
                 if ((iURL != -1) && (iEndAngle != -1) && (iURL < iEndAngle)) {
-                    iCloseQuote = lcPage.indexOf("\"", iURL);
-                    iHatchMark = lcPage.indexOf("#", iURL);
+                    iCloseQuote = page.indexOf("\"", iURL);
+                    iHatchMark = page.indexOf("#", iURL);
                     if ((iCloseQuote != -1) && (iCloseQuote < iEndAngle)) {
                         iEnd = iCloseQuote;
                         if ((iHatchMark != -1) && (iHatchMark < iCloseQuote)) {
                             iEnd = iHatchMark;
                         }
-                        String newUrlString = page.substring(iURL, iEnd);
+                        String newUrlString = page.substring(iURL, iEnd).toLowerCase();
                         URL newUrl = null;
                         try {
                             newUrl = new URL(url, newUrlString);
@@ -420,6 +421,55 @@ public class Crawler {
             index = iEndAngle;
         }
         return results;
+    }
+
+    /**
+     * This class tries to simulate a concurrent queue
+     */
+    private static class UrlQueue {
+        // it consists of many small queues
+        final int LIST_COUNT = 1000;
+        boolean isEmpty = true;
+        HashMap<Integer, LinkedList<URL>> listMap =
+                new HashMap<Integer, LinkedList<URL>>();
+        private final Object[] LIST_LOCK = new Object[LIST_COUNT];
+
+        public UrlQueue() {
+            for (int i = 0; i < LIST_COUNT; i++) {
+                listMap.put(i, new LinkedList<URL>());
+                LIST_LOCK[i] = new Object();
+            }
+        }
+
+        public boolean isEmpty() {
+            return isEmpty;
+        }
+
+        public void add(URL url) {
+            int index = (int)(Math.random() * LIST_COUNT);
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<URL> current = listMap.get(index);
+                current.add(url);
+            }
+        }
+
+        public URL poll() {
+            for (int i = 0; i < 5; i++) {
+                int index = (int)(Math.random() * LIST_COUNT);
+                synchronized (LIST_LOCK[index]) {
+                    LinkedList<URL> current = listMap.get(index);
+                    URL url = current.poll();
+                    if (url != null) {
+                        isEmpty = false;
+                        return url;
+                    }
+                }
+            }
+            // if a thread tries ten times but does not get a url,
+            // consider the whole queue to be empty
+            isEmpty = true;
+            return null;
+        }
     }
 
     public static void main(String[] args) {
