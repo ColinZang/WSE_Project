@@ -127,35 +127,6 @@ public class Crawler {
             pageCount = count;
             output("Total count is " + pageCount);
         }
-        // create root file for the next round
-        FileWriter writer = null;
-        try {
-            writer = new FileWriter(savePath + "root_" + (jobID + 1));
-        } catch (IOException e) {
-            output("Create root_" + (jobID + 1) + " not successfully");
-        }
-        URL url = null;
-        // must use finalPoll()
-        while ((url = urlQueue.finalPoll()) != null) {
-            try {
-                writer.write(url.toString() + "\n");
-            } catch (IOException e) {
-                output("Write to root_" + (jobID + 1) + " not successfully");
-            }
-        }
-        for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
-            int index = entry.getKey();
-            HashSet<URL> set = entry.getValue();
-            synchronized (INTERNAL_HASHSET_LOCK[index]) {
-                for (URL currentUrl : set) {
-                    try {
-                        writer.write(currentUrl.toString() + "\n");
-                    } catch (IOException e) {
-                        output("Write to root_" + (jobID + 1) + " not successfully");
-                    }
-                }
-            }
-        }
         output("Crawling round " + jobID + " has ended");
         System.exit(0);
     }
@@ -505,7 +476,6 @@ public class Crawler {
         HashMap<Integer, LinkedList<URL>> listMap =
                 new HashMap<Integer, LinkedList<URL>>();
         private final Object[] LIST_LOCK = new Object[LIST_COUNT];
-        private int emptyBoundary = 0;
 
         public UrlQueue() {
             for (int i = 0; i < LIST_COUNT; i++) {
@@ -544,22 +514,6 @@ public class Crawler {
             isEmpty = true;
             return null;
         }
-
-        public URL finalPoll() {
-            while (emptyBoundary < LIST_COUNT) {
-                synchronized (LIST_LOCK[emptyBoundary]) {
-                    LinkedList<URL> current = listMap.get(emptyBoundary);
-                    URL url = current.poll();
-                    if (url != null) {
-                        return url;
-                    }
-                    else {
-                        emptyBoundary++;
-                    }
-                }
-            }
-            return null;
-        }
     }
 
     /**
@@ -572,7 +526,6 @@ public class Crawler {
         } catch (IOException e) {
             System.out.println("Write to work log not successfully");
         }
-
     }
 
     public static void main(String[] args) {
