@@ -8,13 +8,13 @@ This program assumes that under the directory variable 'savePath' the user provi
 
 the following two sub-directories have been created: (please use the same capitalization)
 
-a directory called 'hashSets', containing the external hashSets from last round, or empty if it's the first round
+a directory called 'hashSets', containing the external hashSets from last round, or empty if it's the first round,
 
 a directory called 'roots', containing url root files named as 'root_1', 'root_2'... the number of such files
 
 should be the same with the number of rounds the program to be run, so if we plan to run the program
 
-200 times, then the files 'root_1' - 'root_200' should all exist in this directory
+200 times, then the files 'root_1' - 'root_200' should all exist in this directory.
 
 For example, to compile and run: (please cd to src)
 
