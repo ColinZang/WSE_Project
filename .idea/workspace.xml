@@ -30,10 +30,12 @@
       <file leaf-file-name="Crawler.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="110">
-              <caret line="103" column="65" selection-start-line="103" selection-start-column="65" selection-end-line="103" selection-end-column="65" />
+            <state relative-caret-position="125">
+              <caret line="210" column="36" selection-start-line="210" selection-start-column="36" selection-end-line="210" selection-end-column="36" />
               <folding>
                 <element signature="imports" expanded="true" />
+                <element signature="e#20119#20120#0" expanded="true" />
+                <element signature="e#20164#20165#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -103,6 +105,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -155,8 +159,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
-      <pane id="PackagesPane" />
       <pane id="Scratches" />
     </panes>
   </component>
@@ -509,7 +511,14 @@
       <option name="project" value="LOCAL" />
       <updated>1460269258217</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Minor change: 1. the program will not save urls to disk in the end, 2. changed concurrentHashMap to HashMap">
+      <created>1460270643258</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1460270643258</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -555,7 +564,8 @@
     <MESSAGE value="Remove internalHashMap lock, change to 100 internalHashSet lock" />
     <MESSAGE value="1. Create separate directory for each thread, remove global count lock, 2. Changed the program for running multiple rounds" />
     <MESSAGE value="Minor change: the program will take a new url root file each time, and will not save urls to disk in the end" />
-    <option name="LAST_COMMIT_MESSAGE" value="Minor change: the program will take a new url root file each time, and will not save urls to disk in the end" />
+    <MESSAGE value="Minor change: 1. the program will not save urls to disk in the end, 2. changed concurrentHashMap to HashMap" />
+    <option name="LAST_COMMIT_MESSAGE" value="Minor change: 1. the program will not save urls to disk in the end, 2. changed concurrentHashMap to HashMap" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -568,6 +578,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -586,6 +598,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -604,6 +618,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -622,6 +638,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -640,6 +658,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -658,6 +678,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -676,6 +698,28 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/WSE_Project.iml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -709,16 +753,20 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/WebCrawler/Crawler.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="110">
-          <caret line="103" column="65" selection-start-line="103" selection-start-column="65" selection-end-line="103" selection-end-column="65" />
+        <state relative-caret-position="125">
+          <caret line="210" column="36" selection-start-line="210" selection-start-column="36" selection-end-line="210" selection-end-column="36" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#20119#20120#0" expanded="true" />
+            <element signature="e#20164#20165#0" expanded="true" />
           </folding>
         </state>
       </provider>

@@ -28,7 +28,8 @@ public class Crawler {
             new HashMap<Integer, HashSet<URL>>();
     private static int searchLimit = 0;
     private static int pageCount = 0;
-    private static final int EXTERNAL_HASHSET_COUNT = 100;
+    private final static int THREAD_COUNT = 15000;
+    private static final int EXTERNAL_HASHSET_COUNT = 1000;
     private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
     private static int jobID;
     private static final String USAGE = "USAGE: java Crawler [-path savePath] [-max searchLimit] [-id jobID]";
@@ -98,7 +99,6 @@ public class Crawler {
         // assume the hashSets directory has been created
         String dirPath = savePath + "hashSets" + File.separator;
         // based on the new addToUrlQueue() design, no real need to call addToUrlQueue() here
-        final int THREAD_COUNT = 1500;
         Crawling[] crawlings = new Crawling[THREAD_COUNT];
         Thread[] threads = new Thread[THREAD_COUNT];
         // create the parent directory for this round of crawling
@@ -116,7 +116,7 @@ public class Crawler {
         }
         while (pageCount < searchLimit) {
             try {
-                Thread.sleep(5 * 60 * 1000);
+                Thread.sleep(2 * 60 * 1000);
             } catch (InterruptedException e) {
                 // ignore
             }
@@ -126,6 +126,11 @@ public class Crawler {
             }
             pageCount = count;
             output("Total count is " + pageCount);
+        }
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            // ignore
         }
         output("Crawling round " + jobID + " has ended");
         System.exit(0);
@@ -472,7 +477,7 @@ public class Crawler {
     private static class UrlQueue {
         // it consists of many small queues
         final int LIST_COUNT = 1000;
-        boolean isEmpty = true;
+        int emptyPos = 0;
         HashMap<Integer, LinkedList<URL>> listMap =
                 new HashMap<Integer, LinkedList<URL>>();
         private final Object[] LIST_LOCK = new Object[LIST_COUNT];
@@ -485,34 +490,40 @@ public class Crawler {
         }
 
         public boolean isEmpty() {
-            return isEmpty;
+            return emptyPos != -1;
         }
 
+        // there's no lock for emptyPos, so cannot guarantee emptyPos won't change,
+        // but doesn't hurt, and when hit miss is rare, should work well
         public void add(URL url) {
-            int index = (int)(Math.random() * LIST_COUNT);
+            int index = emptyPos;
+            if (index == -1) {
+                index = (int)(Math.random() * LIST_COUNT);
+            }
             synchronized (LIST_LOCK[index]) {
                 LinkedList<URL> current = listMap.get(index);
                 current.add(url);
             }
+            emptyPos = -1;
         }
 
         public URL poll() {
-            // only try once
-            for (int i = 0; i < 1; i++) {
-                int index = (int)(Math.random() * LIST_COUNT);
-                synchronized (LIST_LOCK[index]) {
-                    LinkedList<URL> current = listMap.get(index);
-                    URL url = current.poll();
-                    if (url != null) {
-                        isEmpty = false;
-                        return url;
-                    }
-                }
+            int index = (int)(Math.random() * LIST_COUNT);
+            URL url = null;
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<URL> current = listMap.get(index);
+                url = current.poll();
             }
-            // if a thread does not get a url,
-            // consider the whole queue to be empty
-            isEmpty = true;
-            return null;
+            // if a thread does not get a url from a small queue,
+            // store its index, and the next add() call will add
+            // a url to that position
+            if (url == null) {
+                emptyPos = index;
+            }
+            else {
+                emptyPos = -1;
+            }
+            return url;
         }
     }
 
