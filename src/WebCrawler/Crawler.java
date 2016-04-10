@@ -11,13 +11,12 @@ import java.nio.file.Paths;
  * USAGE: java Crawler [-path savePath] [-max searchLimit] [-id jobID]
  * Please pay attention:
  * This program assumes that under the directory variable 'savePath' the user provides,
- * the following things have been created: (please use the same capitalization)
+ * the following two sub-directories have been created: (please use the same capitalization)
  * a directory called 'hashSets', containing the external hashSets from last round, or empty if it's the first round
- * a file containing the root urls, called 'root_1' or 'root_2'... the number should be the same
- * with the variable 'jobID' the user provides
- * when each round ends, it will generate the root file for next round,
- * so actually only root_1 (no extension) should be created
- * for example, to compile and run: (please cd to src)
+ * a directory called 'roots', containing url root files named as 'root_1', 'root_2'... the number of such files
+ * should be the same with the number of rounds the program to be run, so if we plan to run the program
+ * 200 times, then the files 'root_1' - 'root_200' should all exist in this directory
+ * For example, to compile and run: (please cd to src)
  * javac WebCrawler/Crawler.java
  * java WebCrawler/Crawler -path ../results/ -max 2500 -id 1
  */
@@ -98,7 +97,7 @@ public class Crawler {
         setProxy();
         // assume the hashSets directory has been created
         String dirPath = savePath + "hashSets" + File.separator;
-        // based on the new addToUrlQueue() desgin, no real need to call addToUrlQueue() here
+        // based on the new addToUrlQueue() design, no real need to call addToUrlQueue() here
         final int THREAD_COUNT = 1500;
         Crawling[] crawlings = new Crawling[THREAD_COUNT];
         Thread[] threads = new Thread[THREAD_COUNT];
@@ -109,7 +108,6 @@ public class Crawler {
             resultDir.mkdir();
         }
         for (int i = 0; i < THREAD_COUNT; i++) {
-            // assume the result directory for this jobID has been created
             // convert savePath to resultPath in run() method of the thread, instead of here
             crawlings[i] = new Crawling(i, savePath);
             threads[i] = new Thread(crawlings[i]);
@@ -233,7 +231,7 @@ public class Crawler {
             } catch (IOException e) {
                 output("Save external hashset " + index + " not successfully");
             }
-            // clear the current hashSet, not the entire hashmap
+            // clear the current hashset, not the entire hashmap
             internalHashSet.clear();
         }
     }
@@ -548,8 +546,8 @@ public class Crawler {
         }
 
         public URL finalPoll() {
-            for (int i = emptyBoundary; i < LIST_COUNT; i++) {
-                synchronized (LIST_LOCK[i]) {
+            while (emptyBoundary < LIST_COUNT) {
+                synchronized (LIST_LOCK[emptyBoundary]) {
                     LinkedList<URL> current = listMap.get(emptyBoundary);
                     URL url = current.poll();
                     if (url != null) {
@@ -636,18 +634,23 @@ public class Crawler {
                 System.exit(1);
             }
         }
-        // read in the root file
+        // assume the roots directory has been created, read in the root file
         Scanner readFile = null;
         try {
-            readFile = new Scanner(new FileReader(savePath + "root_" + jobID));
+            readFile = new Scanner(new FileReader(savePath + "roots" + File.separator + "root_" + jobID));
         } catch (FileNotFoundException e) {
             System.out.println("The root file does not exist");
             System.exit(1);
         }
-        // create the work_log file
+        // create a work_log directory (if haven't) and create the work_log file
+        String dirPath = savePath + "work_log" + File.separator;
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
         logWriter = null;
         try {
-            logWriter = new FileWriter(savePath + "workLog_" + jobID);
+            logWriter = new FileWriter(dirPath + "workLog_" + jobID);
         } catch (IOException e) {
             System.out.println("Create workLog_" + jobID + " not successfully");
         }
