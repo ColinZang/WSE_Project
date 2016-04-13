@@ -44,18 +44,16 @@ public class PageCompress {
                 continue;
             }
             String nameWoExt = name.substring(0, name.length() - 5);
-            String wholePage = readPage(file);
-
-            // a tricky case: in somecase, java string will replace "<" to "&lt;"
-            // so we need replace them back, some reason for ">"
-            wholePage = wholePage.replace("&lt;", "<");
-            wholePage = wholePage.replace("&gt;", ">");
-
-            PageFile pageFile = GetPage(nameWoExt, wholePage);
+            String pageHTML = readPage(file);
+            pageHTML = MakeupPageHTML(pageHTML);
+            PageFile pageFile = GetPage(nameWoExt, pageHTML);
             SavePageFile(pageFile, resultDir);
         }
     }
 
+    /*
+     * get file extension
+     */
     private String getExtension(String filename) {
         if (filename == null) {
             return null;
@@ -73,6 +71,9 @@ public class PageCompress {
         }
     }
 
+    /*
+     * read pages from file
+     */
     private String readPage(File file) {
         String wholePage = "";
         try {
@@ -92,6 +93,19 @@ public class PageCompress {
     }
 
     /*
+     * manually modify some special tag case
+     */
+    private String MakeupPageHTML(String pageHTML) {
+        // tricky case1: for some tag, such like <option>, if there is not seperator in text
+        // HTML parser will make spaceless concatenation problem
+        // this is not the fault of Jsoup, it's the falut of UI designer
+        // (we should know this method is not stable, if we meet more special case,
+        // we need add them into here)
+        pageHTML = pageHTML.replaceAll("</option>", " </option>");
+        return pageHTML;
+    }
+
+    /*
      * We use "Jsoup" to extract data that we need from HTML
      * "Jsoup" is much more efficient and stable then "Jtidy",
      * and it can filter <script> in <body> as well while "Jtidy"
@@ -99,6 +113,7 @@ public class PageCompress {
      */
     private PageFile GetPage(String nameWoExt, String wholePage) {
         Document doc = Jsoup.parse(wholePage);
+
         String title = doc.title();
         if (title == null || title.equals("")) {
             title = "NOTITLE";
@@ -123,6 +138,9 @@ public class PageCompress {
         return pageFile;
     }
 
+    /*
+     * save compressed page content into file
+     */
     private void SavePageFile(PageFile pf, File dir) {
         String path = dir.getAbsolutePath() + File.separator + pf.PageID;
         File file = new File(path);
