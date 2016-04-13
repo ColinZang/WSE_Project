@@ -1,5 +1,8 @@
 package WebCrawler;
 
+import PageCompress.PageFile;
+import PageCompress.PageCompress;
+
 import java.util.*;
 import java.net.*;
 import java.io.*;
@@ -33,7 +36,7 @@ public class Crawler {
             new HashMap<Integer, HashSet<URI>>();
     private static int searchLimit = 20000;
     private static int pageCount = 0;
-    private final static int THREAD_COUNT = 15000;
+    private final static int THREAD_COUNT = 1500;
     private static final int EXTERNAL_HASHSET_COUNT = 1000;
     private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
     private static long startTime;
@@ -225,8 +228,18 @@ public class Crawler {
                     // use count as the part of the file name, and only when the page is
                     // saved successfully, the count increments
                     String fileName = jobID + "_" + threadID + "_" + (downloadCount + 1);
+
+                    // generate PageFile object (include pageID, title, subURLs and body text)
+                    PageCompress pc = new PageCompress(fileName, page);
+                    PageFile pageFile = null;
                     try {
-                        savePage(page, fileName);
+                        pageFile = pc.GetPageFile();
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+
+                    try {
+                        savePage(pageFile, fileName);
                     } catch (IOException e) {
                         output("save page " + fileName + " not successfully");
                         continue;
@@ -239,7 +252,12 @@ public class Crawler {
                         output("save mapping for " + fileName + " not successfully");
                         continue;
                     }
-                    List<URI> newUrls = extractUrl(url, page);
+
+                    List<URI> newUrls = new ArrayList<URI>();
+                    if (pageFile != null) {
+                        newUrls = extractUrl(url, pageFile.getSubURLs());
+                    }
+
                     for (URI newUrl: newUrls) {
                         // if newUrl is duplicated in the internal hashmap, it will be ignored
                         // by addToInternalHashMap(newUrl), and the urls in internal hashmap will
@@ -400,14 +418,22 @@ public class Crawler {
     }
 
     /**
-     * This method should save page to disk
+     * This method should save page to disk (modify by Chen Chen)
      */
-    private static void savePage(String page, String fileName)
+    private static void savePage(PageFile pf, String fileName)
             throws IOException {
         String filePath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
         FileWriter writer = new FileWriter(filePath + fileName);
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
-        bufferedWriter.write(page);
+
+        String fileContent = "#TITLE#\n" + pf.getTitle() + "\n\n" + "#SUBURLS#\n";
+        for (String url : pf.getSubURLs()) {
+            fileContent += url + "\n";
+        }
+        fileContent += "\n#CONTENT#\n";
+        fileContent += pf.getContent();
+
+        bufferedWriter.write(fileContent);
         bufferedWriter.close();
     }
 
@@ -432,46 +458,69 @@ public class Crawler {
      * This method should parse the page and extract the urls it contains,
      * and return them in an arraylist
      */
-    private static List<URI> extractUrl(URI url, String page) {
+//    private static List<URI> extractUrl(URI url, String page) {
+//        List<URI> results = new ArrayList<URI>();
+//        // remove page.toLowerCase()
+//        // position in page
+//        int index = 0;
+//        int newIndex = 0;
+//        int iEndAngle, ihref, iURI, iCloseQuote, iHatchMark, iEnd;
+//        while ((newIndex = page.indexOf("<a", index)) != -1
+//                || (newIndex = page.indexOf("<A", index)) != -1) {
+//            index = newIndex;
+//            iEndAngle = page.indexOf(">", index);
+//            if ((ihref = page.indexOf("href", index)) != -1
+//                    || (ihref = page.indexOf("HREF", index)) != -1) {
+//                iURI = page.indexOf("\"", ihref) + 1;
+//                if ((iURI != -1) && (iEndAngle != -1) && (iURI < iEndAngle)) {
+//                    iCloseQuote = page.indexOf("\"", iURI);
+//                    iHatchMark = page.indexOf("#", iURI);
+//                    if ((iCloseQuote != -1) && (iCloseQuote < iEndAngle)) {
+//                        iEnd = iCloseQuote;
+//                        if ((iHatchMark != -1) && (iHatchMark < iCloseQuote)) {
+//                            iEnd = iHatchMark;
+//                        }
+//                        String newUrlString = page.substring(iURI, iEnd).toLowerCase();
+//                        URL newUrl = null;
+//                        try {
+//                            newUrl = new URL(url.toURL(), newUrlString);
+//                        } catch (MalformedURLException e) {
+//                            //ignore invalid urls
+//                            continue;
+//                        }
+//                        try {
+//                            results.add(new URI(newUrl.toString()));
+//                        } catch (URISyntaxException e) {
+//                            //ignore invalid urls
+//                            continue;
+//                        }
+//                    }
+//                }
+//            }
+//            index = iEndAngle;
+//        }
+//        return results;
+//    }
+
+    /*
+     * The main function of the method is to delete invalid subURLs (modify by Chen Chen)
+     */
+    private static List<URI> extractUrl(URI url, List<String> subURLs) {
         List<URI> results = new ArrayList<URI>();
-        // remove page.toLowerCase()
-        // position in page
-        int index = 0;
-        int newIndex = 0;
-        int iEndAngle, ihref, iURI, iCloseQuote, iHatchMark, iEnd;
-        while ((newIndex = page.indexOf("<a", index)) != -1
-                || (newIndex = page.indexOf("<A", index)) != -1) {
-            index = newIndex;
-            iEndAngle = page.indexOf(">", index);
-            if ((ihref = page.indexOf("href", index)) != -1
-                    || (ihref = page.indexOf("HREF", index)) != -1) {
-                iURI = page.indexOf("\"", ihref) + 1;
-                if ((iURI != -1) && (iEndAngle != -1) && (iURI < iEndAngle)) {
-                    iCloseQuote = page.indexOf("\"", iURI);
-                    iHatchMark = page.indexOf("#", iURI);
-                    if ((iCloseQuote != -1) && (iCloseQuote < iEndAngle)) {
-                        iEnd = iCloseQuote;
-                        if ((iHatchMark != -1) && (iHatchMark < iCloseQuote)) {
-                            iEnd = iHatchMark;
-                        }
-                        String newUrlString = page.substring(iURI, iEnd).toLowerCase();
-                        URL newUrl = null;
-                        try {
-                            newUrl = new URL(url.toURL(), newUrlString);
-                        } catch (MalformedURLException e) {
-                            //ignore invalid urls
-                            continue;
-                        }
-                        try {
-                            results.add(new URI(newUrl.toString()));
-                        } catch (URISyntaxException e) {
-                            //ignore invalid urls
-                            continue;
-                        }
-                    }
-                }
+        for (String suburl : subURLs) {
+            URL newUrl = null;
+            try {
+                newUrl = new URL(url.toURL(), suburl);
+            } catch (MalformedURLException e) {
+                //ignore invalid urls
+                continue;
             }
-            index = iEndAngle;
+            try {
+                results.add(new URI(newUrl.toString()));
+            } catch (URISyntaxException e) {
+                //ignore invalid urls
+                continue;
+            }
         }
         return results;
     }
