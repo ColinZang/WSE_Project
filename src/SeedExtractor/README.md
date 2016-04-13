@@ -4,8 +4,8 @@
 [file path], [php script path], [result folder path], [MaxPages#], [NIGHTMODEL], [DEBUG]
 For more details, please see code.
 
-2. Before running code, you have to give at least 3 parameters:
-[file path], [php script path], [result folder path]
+2. Before running code, you have to give at least 4 parameters:
+[file path], [php script path], [result folder path], [MaxPages#]
 
 3. Be careful, because Google can monitor your IP, if you use PHP script to send request frequently,
 your IP might be blocked, which already happend on me. That's why I let process sleep for a while 
