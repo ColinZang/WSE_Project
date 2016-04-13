@@ -1,6 +1,6 @@
 #WebCrawler
 
-/**
+
  * USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]
  * Please pay attention:
  * This program assumes that under the directory variable 'savePath' the user provides,
@@ -13,5 +13,5 @@
  * For example, to compile and run: (please cd to src)
  * javac WebCrawler/Crawler.java
  * java WebCrawler/Crawler -path ../results/ -time 180 -id 1
- */
+ 
  
