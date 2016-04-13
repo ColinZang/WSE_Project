@@ -11,13 +11,12 @@ import java.nio.file.Paths;
  * USAGE: java Crawler [-path savePath] [-max searchLimit] [-id jobID]
  * Please pay attention:
  * This program assumes that under the directory variable 'savePath' the user provides,
- * the following things have been created: (please use the same capitalization)
+ * the following two sub-directories have been created: (please use the same capitalization)
  * a directory called 'hashSets', containing the external hashSets from last round, or empty if it's the first round
- * a file containing the root urls, called 'root_1' or 'root_2'... the number should be the same
- * with the variable 'jobID' the user provides
- * when each round ends, it will generate the root file for next round,
- * so actually only root_1 (no extension) should be created
- * for example, to compile and run: (please cd to src)
+ * a directory called 'roots', containing url root files named as 'root_1', 'root_2'... the number of such files
+ * should be the same with the number of rounds the program to be run, so if we plan to run the program
+ * 200 times, then the files 'root_1' - 'root_200' should all exist in this directory
+ * For example, to compile and run: (please cd to src)
  * javac WebCrawler/Crawler.java
  * java WebCrawler/Crawler -path ../results/ -max 2500 -id 1
  */
@@ -29,7 +28,8 @@ public class Crawler {
             new HashMap<Integer, HashSet<URL>>();
     private static int searchLimit = 0;
     private static int pageCount = 0;
-    private static final int EXTERNAL_HASHSET_COUNT = 100;
+    private final static int THREAD_COUNT = 15000;
+    private static final int EXTERNAL_HASHSET_COUNT = 1000;
     private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
     private static int jobID;
     private static final String USAGE = "USAGE: java Crawler [-path savePath] [-max searchLimit] [-id jobID]";
@@ -98,8 +98,7 @@ public class Crawler {
         setProxy();
         // assume the hashSets directory has been created
         String dirPath = savePath + "hashSets" + File.separator;
-        // based on the new addToUrlQueue() desgin, no real need to call addToUrlQueue() here
-        final int THREAD_COUNT = 1500;
+        // based on the new addToUrlQueue() design, no real need to call addToUrlQueue() here
         Crawling[] crawlings = new Crawling[THREAD_COUNT];
         Thread[] threads = new Thread[THREAD_COUNT];
         // create the parent directory for this round of crawling
@@ -109,7 +108,6 @@ public class Crawler {
             resultDir.mkdir();
         }
         for (int i = 0; i < THREAD_COUNT; i++) {
-            // assume the result directory for this jobID has been created
             // convert savePath to resultPath in run() method of the thread, instead of here
             crawlings[i] = new Crawling(i, savePath);
             threads[i] = new Thread(crawlings[i]);
@@ -118,7 +116,7 @@ public class Crawler {
         }
         while (pageCount < searchLimit) {
             try {
-                Thread.sleep(5 * 60 * 1000);
+                Thread.sleep(2 * 60 * 1000);
             } catch (InterruptedException e) {
                 // ignore
             }
@@ -129,34 +127,10 @@ public class Crawler {
             pageCount = count;
             output("Total count is " + pageCount);
         }
-        // create root file for the next round
-        FileWriter writer = null;
         try {
-            writer = new FileWriter(savePath + "root_" + (jobID + 1));
-        } catch (IOException e) {
-            output("Create root_" + (jobID + 1) + " not successfully");
-        }
-        URL url = null;
-        // must use finalPoll()
-        while ((url = urlQueue.finalPoll()) != null) {
-            try {
-                writer.write(url.toString() + "\n");
-            } catch (IOException e) {
-                output("Write to root_" + (jobID + 1) + " not successfully");
-            }
-        }
-        for (Map.Entry<Integer, HashSet<URL>> entry: internalHashMap.entrySet()) {
-            int index = entry.getKey();
-            HashSet<URL> set = entry.getValue();
-            synchronized (INTERNAL_HASHSET_LOCK[index]) {
-                for (URL currentUrl : set) {
-                    try {
-                        writer.write(currentUrl.toString() + "\n");
-                    } catch (IOException e) {
-                        output("Write to root_" + (jobID + 1) + " not successfully");
-                    }
-                }
-            }
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            // ignore
         }
         output("Crawling round " + jobID + " has ended");
         System.exit(0);
@@ -233,7 +207,7 @@ public class Crawler {
             } catch (IOException e) {
                 output("Save external hashset " + index + " not successfully");
             }
-            // clear the current hashSet, not the entire hashmap
+            // clear the current hashset, not the entire hashmap
             internalHashSet.clear();
         }
     }
@@ -503,11 +477,10 @@ public class Crawler {
     private static class UrlQueue {
         // it consists of many small queues
         final int LIST_COUNT = 1000;
-        boolean isEmpty = true;
+        int emptyPos = 0;
         HashMap<Integer, LinkedList<URL>> listMap =
                 new HashMap<Integer, LinkedList<URL>>();
         private final Object[] LIST_LOCK = new Object[LIST_COUNT];
-        private int emptyBoundary = 0;
 
         public UrlQueue() {
             for (int i = 0; i < LIST_COUNT; i++) {
@@ -517,50 +490,40 @@ public class Crawler {
         }
 
         public boolean isEmpty() {
-            return isEmpty;
+            return emptyPos != -1;
         }
 
+        // there's no lock for emptyPos, so cannot guarantee emptyPos won't change,
+        // but doesn't hurt, and when hit miss is rare, should work well
         public void add(URL url) {
-            int index = (int)(Math.random() * LIST_COUNT);
+            int index = emptyPos;
+            if (index == -1) {
+                index = (int)(Math.random() * LIST_COUNT);
+            }
             synchronized (LIST_LOCK[index]) {
                 LinkedList<URL> current = listMap.get(index);
                 current.add(url);
             }
+            emptyPos = -1;
         }
 
         public URL poll() {
-            // only try once
-            for (int i = 0; i < 1; i++) {
-                int index = (int)(Math.random() * LIST_COUNT);
-                synchronized (LIST_LOCK[index]) {
-                    LinkedList<URL> current = listMap.get(index);
-                    URL url = current.poll();
-                    if (url != null) {
-                        isEmpty = false;
-                        return url;
-                    }
-                }
+            int index = (int)(Math.random() * LIST_COUNT);
+            URL url = null;
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<URL> current = listMap.get(index);
+                url = current.poll();
             }
-            // if a thread does not get a url,
-            // consider the whole queue to be empty
-            isEmpty = true;
-            return null;
-        }
-
-        public URL finalPoll() {
-            for (int i = emptyBoundary; i < LIST_COUNT; i++) {
-                synchronized (LIST_LOCK[i]) {
-                    LinkedList<URL> current = listMap.get(emptyBoundary);
-                    URL url = current.poll();
-                    if (url != null) {
-                        return url;
-                    }
-                    else {
-                        emptyBoundary++;
-                    }
-                }
+            // if a thread does not get a url from a small queue,
+            // store its index, and the next add() call will add
+            // a url to that position
+            if (url == null) {
+                emptyPos = index;
             }
-            return null;
+            else {
+                emptyPos = -1;
+            }
+            return url;
         }
     }
 
@@ -574,7 +537,6 @@ public class Crawler {
         } catch (IOException e) {
             System.out.println("Write to work log not successfully");
         }
-
     }
 
     public static void main(String[] args) {
@@ -636,18 +598,23 @@ public class Crawler {
                 System.exit(1);
             }
         }
-        // read in the root file
+        // assume the roots directory has been created, read in the root file
         Scanner readFile = null;
         try {
-            readFile = new Scanner(new FileReader(savePath + "root_" + jobID));
+            readFile = new Scanner(new FileReader(savePath + "roots" + File.separator + "root_" + jobID));
         } catch (FileNotFoundException e) {
             System.out.println("The root file does not exist");
             System.exit(1);
         }
-        // create the work_log file
+        // create a work_log directory (if haven't) and create the work_log file
+        String dirPath = savePath + "work_log" + File.separator;
+        File dir = new File(dirPath);
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
         logWriter = null;
         try {
-            logWriter = new FileWriter(savePath + "workLog_" + jobID);
+            logWriter = new FileWriter(dirPath + "workLog_" + jobID);
         } catch (IOException e) {
             System.out.println("Create workLog_" + jobID + " not successfully");
         }
