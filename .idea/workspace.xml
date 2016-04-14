@@ -6,7 +6,6 @@
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/data/SeedExtractor/quertlist" afterPath="$PROJECT_DIR$/data/SeedExtractor/quertlist" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/SeedExtractor/SeedExtractor.java" afterPath="$PROJECT_DIR$/src/SeedExtractor/SeedExtractor.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" afterPath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" />
     </list>
     <ignored path="WSE_Project.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -612,7 +611,14 @@
       <option name="project" value="LOCAL" />
       <updated>1460598658567</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="1. Added detpth, 2. Added same domain removal, 3. Added empty content test">
+      <created>1460607476311</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1460607476311</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -671,7 +677,8 @@
     <MESSAGE value="Minor changes: 1. modified UrlQueue.add() method, 2. change the main thread sleep time" />
     <MESSAGE value="1. Save id - url mapping to disk, 2. changed URL to URI" />
     <MESSAGE value="Minor changes on rmInvalidUrl method and savePage method" />
-    <option name="LAST_COMMIT_MESSAGE" value="Minor changes on rmInvalidUrl method and savePage method" />
+    <MESSAGE value="1. Added detpth, 2. Added same domain removal, 3. Added empty content test" />
+    <option name="LAST_COMMIT_MESSAGE" value="1. Added detpth, 2. Added same domain removal, 3. Added empty content test" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
