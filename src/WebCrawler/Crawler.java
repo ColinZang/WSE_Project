@@ -1,8 +1,6 @@
 package WebCrawler;
 
-import PageCompress.PageFile;
-import PageCompress.PageCompress;
-
+import PageCompress.*;
 import java.util.*;
 import java.net.*;
 import java.io.*;
@@ -11,18 +9,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]
- * Please pay attention:
- * This program assumes that under the directory variable 'savePath' the user provides,
- * the following two sub-directories have been created: (please use the same capitalization)
+ * 1) USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]
+ *
+ * 2) Please put 'PageCompress' directory besides the 'WebCrawler' directory under the same parent directory, and
+ * download "jsoup-1.8.3.jar". For example, to compile and run, please cd to the parent directory and type:
+ * javac -cp "../lib/jsoup-1.8.3.jar" PageCompress/*.java
+ * javac -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/*.java
+ * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 300 -id 1
+ *
+ * 3) The unit of duration is second. Search limit is not used because it may never be reached.
+ *
+ * 4) Under the directory variable 'savePath' the user provides, the following two sub-directories should have
+ * been created before running: (please use the same capitalization)
  * a directory called 'hashSets', containing the external hashSets from last round, or empty if it's the first round
  * a directory called 'roots', containing url root files named as 'root_1', 'root_2'... the number of such files
  * should be the same with the number of rounds the program to be run, so if we plan to run the program
- * 200 times, then the files 'root_1' - 'root_200' should all exist in this directory
- * The unit of duration is second
- * For example, to compile and run: (please cd to src)
- * javac WebCrawler/Crawler.java
- * java WebCrawler/Crawler -path ../results/ -time 180 -id 1
+ * 200 times, then the files 'root_1' - 'root_200' (no extensions) should all exist in this directory
  */
 
 public class Crawler {
@@ -228,18 +230,27 @@ public class Crawler {
                     // use count as the part of the file name, and only when the page is
                     // saved successfully, the count increments
                     String fileName = jobID + "_" + threadID + "_" + (downloadCount + 1);
-
-                    // generate PageFile object (include pageID, title, subURLs and body text)
+                    // generate PageFile object, including pageID, title, subURLs and body text
                     PageCompress pc = new PageCompress(fileName, page);
                     PageFile pageFile = null;
                     try {
                         pageFile = pc.GetPageFile();
                     } catch (Exception e) {
-                        System.out.println(e);
+                        output("process page " + fileName + " not successfully");
+                        continue;
                     }
-
+                    List<URI> newUrls = null;
+                    if (pageFile != null) {
+                        newUrls = rmInvalidUrls(url, pageFile.getSubURLs());
+                    }
+                    else {
+                        // to be safe, stop here when pageFile == null
+                        output("process page " + fileName + " not successfully");
+                        continue;
+                    }
+                    // save page to disk
                     try {
-                        savePage(pageFile, fileName);
+                        savePage(fileName, url, newUrls, pageFile.getTitle(), pageFile.getContent());
                     } catch (IOException e) {
                         output("save page " + fileName + " not successfully");
                         continue;
@@ -252,16 +263,11 @@ public class Crawler {
                         output("save mapping for " + fileName + " not successfully");
                         continue;
                     }
-
-                    List<URI> newUrls = new ArrayList<URI>();
-                    if (pageFile != null) {
-                        newUrls = extractUrl(url, pageFile.getSubURLs());
-                    }
-
+                    // add new suburls to queue, if newUrl is duplicated in the internal hashmap,
+                    // it will be ignored by addToInternalHashMap(newUrl), and the urls in
+                    // internal hashmap will also be checked against external hashset before
+                    // being added to queue
                     for (URI newUrl: newUrls) {
-                        // if newUrl is duplicated in the internal hashmap, it will be ignored
-                        // by addToInternalHashMap(newUrl), and the urls in internal hashmap will
-                        // also be checked against external hashset before being added to queue
                         addToInternalHashMap(newUrl);
                     }
                     if (System.currentTimeMillis() - startTime > duration) {
@@ -417,23 +423,49 @@ public class Crawler {
         }
     }
 
-    /**
-     * This method should save page to disk (modify by Chen Chen)
+    /*
+     * This method removes invalid sub urls and assembles valid sub urls (by Chen Chen)
      */
-    private static void savePage(PageFile pf, String fileName)
+    private static List<URI> rmInvalidUrls(URI url, List<String> subURLs) {
+        List<URI> results = new ArrayList<URI>();
+        for (String suburl : subURLs) {
+            URL newUrl = null;
+            try {
+                newUrl = new URL(url.toURL(), suburl);
+            } catch (MalformedURLException e) {
+                //ignore invalid urls
+                continue;
+            }
+            try {
+                results.add(new URI(newUrl.toString()));
+            } catch (URISyntaxException e) {
+                //ignore invalid urls
+                continue;
+            }
+        }
+        return results;
+    }
+
+    /**
+     * This method saves page to disk (by Chen Chen)
+     */
+    private static void savePage(String fileName, URI thisUrl, List<URI> newUrls, String title,
+                                 String content)
             throws IOException {
         String filePath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
         FileWriter writer = new FileWriter(filePath + fileName);
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
-
-        String fileContent = "#TITLE#\n" + pf.getTitle() + "\n\n" + "#SUBURLS#\n";
-        for (String url : pf.getSubURLs()) {
-            fileContent += url + "\n";
+        // write its own url
+        bufferedWriter.write("#ThisURL#" + "\n" + thisUrl.toString() + "\n");
+        // write its suburls
+        bufferedWriter.write("#SubURL#" + "\n");
+        for (URI url: newUrls) {
+            bufferedWriter.write(url.toString() + "\n");
         }
-        fileContent += "\n#CONTENT#\n";
-        fileContent += pf.getContent();
-
-        bufferedWriter.write(fileContent);
+        // write its title
+        bufferedWriter.write("#Title#" + "\n" + title + "\n");
+        // write its content
+        bufferedWriter.write("#Content#" + "\n" + content + "\n");
         bufferedWriter.close();
     }
 
@@ -452,77 +484,6 @@ public class Crawler {
         synchronized (URI_WRITER_LOCK[index]) {
             urlWriter[index].write(url.toString() + "\n" + id + "\n");
         }
-    }
-
-    /**
-     * This method should parse the page and extract the urls it contains,
-     * and return them in an arraylist
-     */
-//    private static List<URI> extractUrl(URI url, String page) {
-//        List<URI> results = new ArrayList<URI>();
-//        // remove page.toLowerCase()
-//        // position in page
-//        int index = 0;
-//        int newIndex = 0;
-//        int iEndAngle, ihref, iURI, iCloseQuote, iHatchMark, iEnd;
-//        while ((newIndex = page.indexOf("<a", index)) != -1
-//                || (newIndex = page.indexOf("<A", index)) != -1) {
-//            index = newIndex;
-//            iEndAngle = page.indexOf(">", index);
-//            if ((ihref = page.indexOf("href", index)) != -1
-//                    || (ihref = page.indexOf("HREF", index)) != -1) {
-//                iURI = page.indexOf("\"", ihref) + 1;
-//                if ((iURI != -1) && (iEndAngle != -1) && (iURI < iEndAngle)) {
-//                    iCloseQuote = page.indexOf("\"", iURI);
-//                    iHatchMark = page.indexOf("#", iURI);
-//                    if ((iCloseQuote != -1) && (iCloseQuote < iEndAngle)) {
-//                        iEnd = iCloseQuote;
-//                        if ((iHatchMark != -1) && (iHatchMark < iCloseQuote)) {
-//                            iEnd = iHatchMark;
-//                        }
-//                        String newUrlString = page.substring(iURI, iEnd).toLowerCase();
-//                        URL newUrl = null;
-//                        try {
-//                            newUrl = new URL(url.toURL(), newUrlString);
-//                        } catch (MalformedURLException e) {
-//                            //ignore invalid urls
-//                            continue;
-//                        }
-//                        try {
-//                            results.add(new URI(newUrl.toString()));
-//                        } catch (URISyntaxException e) {
-//                            //ignore invalid urls
-//                            continue;
-//                        }
-//                    }
-//                }
-//            }
-//            index = iEndAngle;
-//        }
-//        return results;
-//    }
-
-    /*
-     * The main function of the method is to delete invalid subURLs (modify by Chen Chen)
-     */
-    private static List<URI> extractUrl(URI url, List<String> subURLs) {
-        List<URI> results = new ArrayList<URI>();
-        for (String suburl : subURLs) {
-            URL newUrl = null;
-            try {
-                newUrl = new URL(url.toURL(), suburl);
-            } catch (MalformedURLException e) {
-                //ignore invalid urls
-                continue;
-            }
-            try {
-                results.add(new URI(newUrl.toString()));
-            } catch (URISyntaxException e) {
-                //ignore invalid urls
-                continue;
-            }
-        }
-        return results;
     }
 
     /**
