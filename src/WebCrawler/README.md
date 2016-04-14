@@ -3,8 +3,11 @@
  1) USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]
  
  2) Please put 'PageCompress' directory besides the 'WebCrawler' directory under the same parent directory, and download "jsoup-1.8.3.jar". For example, to compile and run, please cd to the parent directory and type:
+ 
  javac -cp "../lib/jsoup-1.8.3.jar" PageCompress/*.java
+ 
  javac -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/*.java
+ 
  java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 5 -id 1
  
  3) The unit of duration is minute. Search limit is not used because it may never be reached.
