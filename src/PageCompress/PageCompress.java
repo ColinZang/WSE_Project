@@ -48,6 +48,8 @@ public class PageCompress {
 
         // get page body text content
         String bodyText = doc.body().text();
+        // in some special case, "&nbsp" didn't be decoded to space
+        bodyText = bodyText.replace("&nbsp", " ");
 
         // we can filter duplicated subURL at here
         // And we also can filter those invalid urls at here (I didn't do it in this code)
