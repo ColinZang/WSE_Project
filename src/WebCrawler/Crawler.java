@@ -15,9 +15,9 @@ import java.nio.file.Paths;
  * download "jsoup-1.8.3.jar". For example, to compile and run, please cd to the parent directory and type:
  * javac -cp "../lib/jsoup-1.8.3.jar" PageCompress/*.java
  * javac -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/*.java
- * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 300 -id 1
+ * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 5 -id 1
  *
- * 3) The unit of duration is second. Search limit is not used because it may never be reached.
+ * 3) The unit of duration is minute. Search limit is not used because it may never be reached.
  *
  * 4) Under the directory variable 'savePath' the user provides, the following two sub-directories should have
  * been created before running: (please use the same capitalization)
@@ -31,16 +31,18 @@ public class Crawler {
     private static final String USAGE = "USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]";
     private static String savePath;
     private static int jobID;
-    private static final int MAX_DEPTH = 3;
+    private static final int MAX_DEPTH = 4;
     private static UrlQueue urlQueue =
             new UrlQueue();
     private static HashMap<Integer, HashSet<MyURI>> internalHashMap =
             new HashMap<Integer, HashSet<MyURI>>();
+    private static List<MyURI> nextRoots = new ArrayList<MyURI>();
     private static int searchLimit = 20000;
     private static int pageCount = 0;
     private static final int THREAD_COUNT = 1500;
     private static final int EXTERNAL_HASHSET_COUNT = 1000;
     private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
+    private static final Object NEXT_ROOTS_LOCK = new Object();
     private static long startTime;
     private static long duration;
     private static BufferedWriter logWriter;
@@ -261,7 +263,7 @@ public class Crawler {
                         continue;
                     }
                     downloadCount++;
-                    output("thread " + threadID + " downloaded page " + fileName + " with depth " + url.getDepth());
+                    //output("thread " + threadID + " downloaded page " + fileName + " with depth " + url.getDepth());
                     try {
                         writeToMapping(fileName, url, threadID);
                     } catch (IOException e) {
@@ -278,6 +280,15 @@ public class Crawler {
                             addToInternalHashMap(newUrl);
                         }
                     }
+                    else if (newUrls.size() != 0 && nextRoots.size() < 50) {
+                        // if depth >= MAX_DEPTH, randomly select 50 urls as the roots of potential
+                        // future crawling
+                        synchronized (NEXT_ROOTS_LOCK) {
+                            if (nextRoots.size() < 50) {
+                                nextRoots.add(newUrls.get(0));
+                            }
+                        }
+                    }
                     if (System.currentTimeMillis() - startTime > duration) {
                         try {
                             stop();
@@ -288,6 +299,13 @@ public class Crawler {
                 }
                 // if the current queue is empty, initiate addToUrlQueue() method
                 addToUrlQueue();
+                if (System.currentTimeMillis() - startTime > duration) {
+                    try {
+                        stop();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
             }
         }
 
@@ -576,6 +594,14 @@ public class Crawler {
             }
             return url;
         }
+
+        public int size() {
+            int index = (int)(Math.random() * LIST_COUNT);
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<MyURI> current = listMap.get(index);
+                return current.size();
+            }
+        }
     }
 
     /**
@@ -593,9 +619,23 @@ public class Crawler {
     }
 
     /**
-     * This method closes all writers and exits the program
+     * This method saves future roots, closes all writers and exits the program
      */
-    private static void stop() throws IOException {
+    private synchronized static void stop() throws IOException {
+        String dirPath = savePath + "roots" + File.separator;
+        int currentCount = new File(dirPath).list().length;
+        String fileName = "root_" + (currentCount + 1);
+        BufferedWriter nextWriter = null;
+        try {
+            FileWriter writer = new FileWriter(dirPath + fileName);
+            nextWriter = new BufferedWriter(writer);
+        } catch (IOException e) {
+            System.out.println("Create " + fileName + " not successfully");
+        }
+        for (MyURI myUrl: nextRoots) {
+            nextWriter.write(myUrl.getURI().toString() + "\n");
+        }
+        nextWriter.close();
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
             synchronized (ID_WRITER_LOCK[i]) {
                 idWriter[i].close();
@@ -673,7 +713,7 @@ public class Crawler {
             }
             else if (args[index].equals("-time")) {
                 try {
-                    duration = Long.parseLong(args[index + 1]) * 1000;
+                    duration = Long.parseLong(args[index + 1]) * 60 * 1000;
                     index += 2;
                 } catch (NumberFormatException e) {
                     System.out.println("Please provide an integer value for duration");
