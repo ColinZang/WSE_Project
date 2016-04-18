@@ -261,7 +261,8 @@ public class Crawler {
                     newUrls = rmSameDomain(newUrls);
                     // save page to disk
                     try {
-                        savePage(fileName, url, newUrls, pageFile.getTitle(), pageFile.getContent(), threadID);
+                        savePage(fileName, url, newUrls, pageFile.getCount(), pageFile.getTitle(),
+                                pageFile.getContent(), threadID);
                     } catch (IOException e) {
                         output("save page " + fileName + " not successfully");
                         continue;
@@ -507,8 +508,8 @@ public class Crawler {
     /**
      * This method saves page to disk (by Chen Chen)
      */
-    private static void savePage(String fileName, MyURI thisUrl, List<MyURI> newUrls, String title,
-                                 String content, int threadID)
+    private static void savePage(String fileName, MyURI thisUrl, List<MyURI> newUrls, int length,
+                                 String title, String content, int threadID)
             throws IOException {
         String filePath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
         filePath = filePath + jobID + "_" + threadID + File.separator;
@@ -521,6 +522,8 @@ public class Crawler {
         for (MyURI url: newUrls) {
             bufferedWriter.write(url.getURI().toString() + "\n");
         }
+        // write its length
+        bufferedWriter.write("#Length#" + "\n" + length + "\n");
         // write its title
         bufferedWriter.write("#Title#" + "\n" + title + "\n");
         // write its content
