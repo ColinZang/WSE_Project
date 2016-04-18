@@ -58,8 +58,7 @@ public class PageRank {
             page = new Page(id, pageList.size());
             pageList.add(page);
             current.put(id, page);
-            fixById(id);
-            fixByUrl(url);
+            fixMap(url);
         }
         return page;
     }
