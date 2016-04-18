@@ -38,6 +38,8 @@ public class PageCompress {
         // manually modify some special tag case
         pageHTML = MakeupPageHTML(pageHTML);
 
+        boolean hasSpecialPunc = HashSpecialPunctuation(pageHTML);
+
         Document doc = Jsoup.parse(pageHTML);
 
         // get page title
@@ -47,12 +49,15 @@ public class PageCompress {
         }
 
         // get page body text content
-        String bodyText = doc.body().text();
-        // in some special case, "&nbsp" didn't be decoded to space
-        bodyText = bodyText.replace("&nbsp", " ");
+        // in some pages, they don't have <body>...</body>
+        String bodyText = "";
+        if (pageHTML.indexOf("<body") != -1 || pageHTML.indexOf("<BODY") != -1) {
+            bodyText = doc.body().text();
+            bodyText = MakeupPageBodyContent(bodyText, hasSpecialPunc);
+            // bodyText = bodyText.replace("&nbsp", " ");
+        }
 
         // we can filter duplicated subURL at here
-        // And we also can filter those invalid urls at here (I didn't do it in this code)
         Set<String> subURLs = new HashSet<String>();
         Elements links = doc.select("a");
         for (Element link : links) {
@@ -77,7 +82,119 @@ public class PageCompress {
         // this is not the fault of Jsoup, it's the falut of UI designer
         // (we should know this method is not stable, if we meet more special case,
         // we need add them into here)
-        pageHTML = pageHTML.replaceAll("</option>", " </option>");
-        return pageHTML;
+        pageHTML = pageHTML.replace("</option>", " </option>");
+        pageHTML = pageHTML.replace("</name>", " </name>");
+
+
+        // delete imbeded <code> tag
+        pageHTML = pageHTML.replace("<CODE", "<code");
+        pageHTML = pageHTML.replace("/CODE>", "/code>");
+        String res = pageHTML;
+        if (res.indexOf("<code>") != -1) {
+            int index = 0;
+            int iEndCode;
+            while ((index = res.indexOf("<code")) != -1) {
+                iEndCode = res.indexOf("/code>",index) + 5;
+                if (iEndCode < index) {
+                    iEndCode = res.length() - 1;
+                }
+                // delete <code>...</code>
+                if (iEndCode < res.length() - 1) {
+                    res = res.substring(0, index) + res.substring(iEndCode+1);
+                } else {
+                    res = res.substring(0, index+1);
+                }
+            }
+            return res;
+        } else {
+            return pageHTML;
+        }
+    }
+
+    /*
+     * check whether html page has special punctuation "<" or ">" which is not tag but in text
+     */
+    private boolean HashSpecialPunctuation(String pageHTML) {
+        if (pageHTML.indexOf("&lt;") != -1 || pageHTML.indexOf("&gt;") != -1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private String MakeupPageBodyContent(String content, boolean hasSpecialPunc) {
+        // skip<script> and <style>
+        String modifyContent = content;
+        modifyContent.replace("<SCRIPT", "<script");
+        modifyContent.replace("<STYLE", "<style");
+        modifyContent.replace("/SCRIPT>", "/script>");
+        modifyContent.replace("/STYLE>", "/style>");
+
+        // delete <script>...</script>
+        if (modifyContent.indexOf("<script") != -1) {
+            int index = 0;
+            int iEnd;
+            while ((index = modifyContent.indexOf("<script")) != -1) {
+                iEnd = modifyContent.indexOf("/script>",index) + 7;
+                if (iEnd < index) {
+                    iEnd = modifyContent.length() - 1;
+                }
+                if (iEnd < modifyContent.length() - 1) {
+                    modifyContent = modifyContent.substring(0, index) + modifyContent.substring(iEnd+1);
+                } else {
+                    modifyContent = modifyContent.substring(0, index+1);
+                }
+            }
+        }
+
+        // delete <style>...</style>
+        if (modifyContent.indexOf("<style") != -1) {
+            int index = 0;
+            int iEnd;
+            while ((index = modifyContent.indexOf("<style")) != -1) {
+                iEnd = modifyContent.indexOf("/style>",index) + 6;
+                if (iEnd < index) {
+                    iEnd = modifyContent.length() - 1;
+                }
+                if (iEnd < modifyContent.length() - 1) {
+                    modifyContent = modifyContent.substring(0, index) + modifyContent.substring(iEnd+1);
+                } else {
+                    modifyContent = modifyContent.substring(0, index+1);
+                }
+            }
+        }
+
+        // hasSpecialPunc is true means in text has "&lt;" (<) or "&gt;" (>)
+        // then we cannot do second <tag> pass
+        if (hasSpecialPunc) {
+            return modifyContent;
+        } else {
+            // flag: true means is in <>; false means not in <>
+            boolean flag = false;
+            int count = 0;
+            String res = "";
+            for (int i = 0; i < modifyContent.length(); i++) {
+                if (flag) {
+                    if (modifyContent.charAt(i) == '>') {
+                        count--;
+                        if (count == 0) {
+                            flag = false;
+                        }
+                    } else if (modifyContent.charAt(i) == '<'){
+                        count++;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    if (modifyContent.charAt(i) == '<') {
+                        count++;
+                        flag = true;
+                    } else {
+                        res += modifyContent.charAt(i);
+                    }
+                }
+            }
+            return res;
+        }
     }
 }
