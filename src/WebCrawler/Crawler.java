@@ -15,9 +15,9 @@ import java.nio.file.Paths;
  * download "jsoup-1.8.3.jar". For example, to compile and run, please cd to the parent directory and type:
  * javac -cp "../lib/jsoup-1.8.3.jar" PageCompress/*.java
  * javac -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/*.java
- * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 300 -id 1
+ * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 5 -id 1
  *
- * 3) The unit of duration is second. Search limit is not used because it may never be reached.
+ * 3) The unit of duration is minute. Search limit is not used because it may never be reached.
  *
  * 4) Under the directory variable 'savePath' the user provides, the following two sub-directories should have
  * been created before running: (please use the same capitalization)
@@ -31,23 +31,23 @@ public class Crawler {
     private static final String USAGE = "USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]";
     private static String savePath;
     private static int jobID;
-    private static final int MAX_DEPTH = 3;
+    private static final int MAX_DEPTH = 4;
     private static UrlQueue urlQueue =
             new UrlQueue();
     private static HashMap<Integer, HashSet<MyURI>> internalHashMap =
             new HashMap<Integer, HashSet<MyURI>>();
+    private static List<MyURI> nextRoots = new ArrayList<MyURI>();
     private static int searchLimit = 20000;
     private static int pageCount = 0;
     private static final int THREAD_COUNT = 1500;
     private static final int EXTERNAL_HASHSET_COUNT = 1000;
     private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
+    private static final Object NEXT_ROOTS_LOCK = new Object();
     private static long startTime;
     private static long duration;
     private static BufferedWriter logWriter;
     private static final Object LOG_WRITER_LOCK = new Object();
-    private static BufferedWriter[] idWriter = new BufferedWriter[EXTERNAL_HASHSET_COUNT];
     private static BufferedWriter[] urlWriter = new BufferedWriter[EXTERNAL_HASHSET_COUNT];
-    private static final Object[] ID_WRITER_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
     private static final Object[] URI_WRITER_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
 
     /**
@@ -69,7 +69,6 @@ public class Crawler {
         // initialize locks
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
             INTERNAL_HASHSET_LOCK[i] = new Object[i];
-            ID_WRITER_LOCK[i] = new Object[i];
             URI_WRITER_LOCK[i] = new Object[i];
         }
         while (readFile.hasNextLine()) {
@@ -217,6 +216,13 @@ public class Crawler {
         }
 
         public void run() {
+            // create a separate directory for each thread
+            String dirPath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
+            dirPath = dirPath + jobID + "_" + threadID + File.separator;
+            File dir = new File(dirPath);
+            if (!dir.exists()) {
+                dir.mkdir();
+            }
             MyURI url = null;
             while (pageCount < searchLimit) {
                 while (pageCount < searchLimit && (url = urlQueue.poll()) != null) {
@@ -255,15 +261,15 @@ public class Crawler {
                     newUrls = rmSameDomain(newUrls);
                     // save page to disk
                     try {
-                        savePage(fileName, url, newUrls, pageFile.getTitle(), pageFile.getContent());
+                        savePage(fileName, url, newUrls, pageFile.getTitle(), pageFile.getContent(), threadID);
                     } catch (IOException e) {
                         output("save page " + fileName + " not successfully");
                         continue;
                     }
                     downloadCount++;
-                    output("thread " + threadID + " downloaded page " + fileName + " with depth " + url.getDepth());
+                    //output("thread " + threadID + " downloaded page " + fileName + " with depth " + url.getDepth());
                     try {
-                        writeToMapping(fileName, url, threadID);
+                        writeToMapping(fileName, url);
                     } catch (IOException e) {
                         output("save mapping for " + fileName + " not successfully");
                         continue;
@@ -278,6 +284,15 @@ public class Crawler {
                             addToInternalHashMap(newUrl);
                         }
                     }
+                    else if (newUrls.size() != 0 && nextRoots.size() < 50) {
+                        // if depth >= MAX_DEPTH, randomly select 50 urls as the roots of potential
+                        // future crawling
+                        synchronized (NEXT_ROOTS_LOCK) {
+                            if (nextRoots.size() < 50) {
+                                nextRoots.add(newUrls.get(0));
+                            }
+                        }
+                    }
                     if (System.currentTimeMillis() - startTime > duration) {
                         try {
                             stop();
@@ -288,6 +303,13 @@ public class Crawler {
                 }
                 // if the current queue is empty, initiate addToUrlQueue() method
                 addToUrlQueue();
+                if (System.currentTimeMillis() - startTime > duration) {
+                    try {
+                        stop();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
             }
         }
 
@@ -486,10 +508,11 @@ public class Crawler {
      * This method saves page to disk (by Chen Chen)
      */
     private static void savePage(String fileName, MyURI thisUrl, List<MyURI> newUrls, String title,
-                                 String content)
+                                 String content, int threadID)
             throws IOException {
         String filePath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
-        FileWriter writer = new FileWriter(filePath + fileName);
+        filePath = filePath + jobID + "_" + threadID + File.separator;
+        FileWriter writer = new FileWriter(filePath + fileName + ".page");
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
         // write its own url
         bufferedWriter.write("#ThisURL#" + "\n" + thisUrl.getURI().toString() + "\n");
@@ -508,15 +531,10 @@ public class Crawler {
     /**
      * This method saves the pageID - url pair to disk
      */
-    private static void writeToMapping(String id, MyURI url, int threadID)
+    private static void writeToMapping(String id, MyURI url)
             throws IOException {
-        // id to url
-        int index = threadID % EXTERNAL_HASHSET_COUNT;
-        synchronized (ID_WRITER_LOCK[index]) {
-            idWriter[index].write(id + "\n" + url.getURI().toString() + "\n");
-        }
         // url to id
-        index = hash(url);
+        int index = hash(url);
         synchronized (URI_WRITER_LOCK[index]) {
             urlWriter[index].write(url.getURI().toString() + "\n" + id + "\n");
         }
@@ -576,6 +594,14 @@ public class Crawler {
             }
             return url;
         }
+
+        public int size() {
+            int index = (int)(Math.random() * LIST_COUNT);
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<MyURI> current = listMap.get(index);
+                return current.size();
+            }
+        }
     }
 
     /**
@@ -593,13 +619,24 @@ public class Crawler {
     }
 
     /**
-     * This method closes all writers and exits the program
+     * This method saves future roots, closes all writers and exits the program
      */
-    private static void stop() throws IOException {
+    private synchronized static void stop()
+            throws IOException {
+        String dirPath = savePath + "roots" + File.separator;
+        String fileName = "root_" + (jobID + 1000);
+        BufferedWriter nextWriter = null;
+        try {
+            FileWriter writer = new FileWriter(dirPath + fileName);
+            nextWriter = new BufferedWriter(writer);
+        } catch (IOException e) {
+            System.out.println("Create " + fileName + " not successfully");
+        }
+        for (MyURI myUrl: nextRoots) {
+            nextWriter.write(myUrl.getURI().toString() + "\n");
+        }
+        nextWriter.close();
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
-            synchronized (ID_WRITER_LOCK[i]) {
-                idWriter[i].close();
-            }
             synchronized (URI_WRITER_LOCK[i]) {
                 urlWriter[i].close();
             }
@@ -673,7 +710,7 @@ public class Crawler {
             }
             else if (args[index].equals("-time")) {
                 try {
-                    duration = Long.parseLong(args[index + 1]) * 1000;
+                    duration = Long.parseLong(args[index + 1]) * 60 * 1000;
                     index += 2;
                 } catch (NumberFormatException e) {
                     System.out.println("Please provide an integer value for duration");
@@ -727,18 +764,6 @@ public class Crawler {
         if (!mappingDir.exists()) {
             mappingDir.mkdir();
         }
-        String insidePath = mappingPath + "idToUrl" + File.separator;
-        File insideDir = new File(insidePath);
-        // only useful when it's the first time
-        if (!insideDir.exists()) {
-            insideDir.mkdir();
-        }
-        insidePath = mappingPath + "urlToId" + File.separator;
-        insideDir = new File(insidePath);
-        // only useful when it's the first time
-        if (!insideDir.exists()) {
-            insideDir.mkdir();
-        }
         // create a work_log directory (if haven't) and create the work_log file
         String dirPath = savePath + "work_log" + File.separator;
         File dir = new File(dirPath);
@@ -748,26 +773,19 @@ public class Crawler {
         }
         // initialize log writer
         try {
-            FileWriter writer = new FileWriter(dirPath + "workLog_" + jobID);
+            FileWriter writer = new FileWriter(dirPath + "workLog_" + jobID + ".log");
             logWriter = new BufferedWriter(writer);
         } catch (IOException e) {
             System.out.println("Create workLog_" + jobID + " not successfully");
         }
-        // initialize id and url writer
+        // initialize url writer
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
-            String fileName = savePath + "pageID" + File.separator + "idToUrl" + File.separator + "idToUrl_" + i;
-            try {
-                FileWriter writer = new FileWriter(fileName, true);
-                idWriter[i] = new BufferedWriter(writer);
-            } catch (IOException e) {
-                System.out.println("Create idToUrl_" + i + " not successfully");
-            }
-            fileName = savePath + "pageID" + File.separator + "urlToId" + File.separator + "urlToId_" + i;
+            String fileName = savePath + "pageID" + File.separator + "urlToId_" + i + ".mapping";
             try {
                 FileWriter writer = new FileWriter(fileName, true);
                 urlWriter[i] = new BufferedWriter(writer);
             } catch (IOException e) {
-                System.out.println("Create urlToId_" + i + " not successfully");
+                System.out.println("Read urlToId_" + i + " not successfully");
             }
         }
         return readFile;
