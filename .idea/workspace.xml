@@ -4,7 +4,6 @@
     <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="">
       <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/PageRank/PageRank.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" afterPath="$PROJECT_DIR$/src/WebCrawler/Crawler.java" />
     </list>
     <ignored path="WSE_Project.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -709,12 +708,19 @@
       <option name="project" value="LOCAL" />
       <updated>1460661184836</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="1. Created separate folder for each thread, 2. remove save idToUrl">
+      <created>1460942800285</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1460942800285</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1280" height="717" extended-state="0" />
-    <editor active="true" />
+    <editor active="false" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -772,7 +778,8 @@
     <MESSAGE value="list update" />
     <MESSAGE value="The version in real use" />
     <MESSAGE value="The version in real use (added saving for future crawling)" />
-    <option name="LAST_COMMIT_MESSAGE" value="The version in real use (added saving for future crawling)" />
+    <MESSAGE value="1. Created separate folder for each thread, 2. remove save idToUrl" />
+    <option name="LAST_COMMIT_MESSAGE" value="1. Created separate folder for each thread, 2. remove save idToUrl" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
