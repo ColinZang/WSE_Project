@@ -34,7 +34,7 @@ public class Indexter {
     private static final int    EMAIL_MAP_THRESHOLD = 1000;
     private static final int    DIFF_DIGIT_LETTER       = 5;
     private static final int    TOKEN_LENGTH_THRESHOLD  = 30;
-    private static final String DELIMS_1            = "[ \n\r\t ]+";
+    private static final String DELIMS_1            = "[ \n\r\t ]+";
     private static final String DELIMS_2            = "[~#%&*{}\\:<>?/|!$=+;_()\'\"^]+";
     private static final String IS_ENGLISH_REGEX    = "^[ \\w \\d \\s \\. \\& \\+ \\- \\, \\! \\@ \\# \\$ \\% \\^ \\* \\( \\) \\; \\\\ \\/ \\| \\< \\> \\\" \\' \\? \\= \\: \\[ \\] ]*$";
 
@@ -222,7 +222,7 @@ public class Indexter {
             // then use special characters to split token
             // the reason do make this design is that using other character to splic content
             // might broken a whole token, such as URL
-            // be careful, in DELIMS_1 the first space " " is different with the last space " "
+            // be careful, in DELIMS_1 the first space " " is different with the last space " "
             String[] tokens = content.split(DELIMS_1);
             for (String token : tokens) {
                 // 1. first delete useless chars at token's head and tail
