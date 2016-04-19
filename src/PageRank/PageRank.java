@@ -50,43 +50,74 @@ public class PageRank {
 
     private static void loadMap(String mapPath)
             throws IOException {
-        for (int i = 0; i < HASH_MOD; i++) {
-            String fileName = "urlToId_" + i + ".mapping";
-            Scanner reader = new Scanner(new FileReader(mapPath + fileName));
+        if (!mapPath.endsWith(File.separator)) {
+            mapPath += File.separator;
+        }
+        File dir = new File(mapPath);
+        File[] maps = dir.listFiles();
+        for (File map: maps) {
+            if (!map.getName().endsWith(".mapping")) {
+                continue;
+            }
+            Scanner reader = new Scanner(new FileReader(map));
             while (reader.hasNextLine()) {
                 String url = reader.nextLine();
                 String id = reader.nextLine();
                 PutToUrlToId(id, url);
             }
+            reader.close();
         }
     }
 
     private static void readThruFiles(String filePath)
             throws IOException {
+        if (!filePath.endsWith(File.separator)) {
+            filePath += File.separator;
+        }
         File dir = new File(filePath);
         File[] jobDirs = dir.listFiles();
+        int count = 0;
         for (File job: jobDirs) {
             File[] threadDirs = job.listFiles();
+            if (threadDirs == null) {
+                continue;
+            }
             for (File thread: threadDirs) {
                 File[] pages = thread.listFiles();
+                if (pages == null) {
+                    continue;
+                }
                 for (File page: pages) {
+                    if (!page.getName().endsWith(".page")) {
+                        continue;
+                    }
                     Scanner readFile = new Scanner(new FileReader(page));
                     String id = page.getName();
                     int extPos = id.indexOf('.', 0);
                     id = id.substring(0, extPos);
                     // start parsing
-                    // ignore #ThisURL# tag
-                    readFile.nextLine();
-                    String thisUrl = readFile.nextLine();
-                    // ignore #SubURL# tag
-                    readFile.nextLine();
+                    String thisUrl = null;
                     List<String> subUrls = new ArrayList<String>();
-                    String line = null;
-                    while (readFile.hasNextLine() && !(line = readFile.nextLine()).equals("#Length#")) {
-                        subUrls.add(line);
+                    int length = 0;
+                    try {
+                        // ignore #ThisURL# tag
+                        readFile.nextLine();
+                        thisUrl = readFile.nextLine();
+                        // ignore #SubURL# tag
+                        readFile.nextLine();
+                        String line = null;
+                        while (readFile.hasNextLine() && !(line = readFile.nextLine()).equals("#Length#")) {
+                            subUrls.add(line);
+                        }
+                        length = Integer.parseInt(readFile.nextLine());
+                    } catch (RuntimeException e) {
+                        System.out.println("page " + id + " incomplete, ignore");
+                        continue;
                     }
-                    int length = Integer.parseInt(readFile.nextLine());
                     processPage(id, thisUrl, subUrls, length);
+                    count++;
+                    System.out.println("processed " + count + " pages");
+                    readFile.close();
                 }
             }
         }
@@ -98,7 +129,9 @@ public class PageRank {
         int n = pageList.size();
         double[] result = new double[n];
         System.arraycopy(base, 0, result, 0, n);
+        int round = 1;
         while (true) {
+            System.out.println("calculating round " + round);
             double[] newResult = new double[n];
             System.arraycopy(base, 0, newResult, 0, n);
             for (int i = 0; i < n; i++) {
@@ -116,12 +149,16 @@ public class PageRank {
                 break;
             }
             result = newResult;
+            round++;
         }
         return result;
     }
 
     private static void saveResult(double[] result, String savePath)
             throws IOException {
+        if (!savePath.endsWith(File.separator)) {
+            savePath += File.separator;
+        }
         BufferedWriter[] writer = new BufferedWriter[HASH_MOD];
         for (int i = 0; i < HASH_MOD; i++) {
             String fileName = "pageRank_" + i;
@@ -133,6 +170,7 @@ public class PageRank {
             String id = current.getId();
             int index = hashId(id);
             writer[index].write(id + "\n" + result[i] + "\n");
+            //writer[index].write(id + "\n" + String.format("%.10f", result[i]) + "\n");
         }
         for (int i = 0; i < HASH_MOD; i++) {
             writer[i].close();
@@ -205,7 +243,7 @@ public class PageRank {
 
     private static int hashId(String id) {
         int first = id.indexOf('_', 0);
-        int second = id.indexOf('_', first);
+        int second = id.indexOf('_', first + 1);
         int threadId = Integer.parseInt(id.substring(first + 1, second));
         return threadId % HASH_MOD;
     }
@@ -245,7 +283,12 @@ public class PageRank {
     }
 
     private static boolean noDiff(double[] one, double[] two) {
-        // need to think
+        final double diff = 10E-10;
+        for (int i = 0; i < one.length; i++) {
+            if (Math.abs(one[i] - two[i]) > diff) {
+                return false;
+            }
+        }
         return true;
     }
 
