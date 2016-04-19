@@ -161,7 +161,7 @@ public class PageRank {
         }
         BufferedWriter[] writer = new BufferedWriter[HASH_MOD];
         for (int i = 0; i < HASH_MOD; i++) {
-            String fileName = "pageRank_" + i;
+            String fileName = "pageRank_" + i + ".rank";
             FileWriter temp = new FileWriter(new File(savePath + fileName));
             writer[i] = new BufferedWriter(temp);
         }
