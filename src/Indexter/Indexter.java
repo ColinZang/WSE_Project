@@ -12,6 +12,8 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.*;
 
+import static java.lang.Thread.sleep;
+
 /**
  * Created by ChenChen on 4/18/16.
  */
@@ -505,6 +507,7 @@ public class Indexter {
          */
         private void WriteEmailMap() {
             RandomAccessFile emailFile = null;
+            FileChannel emailFileChannel = null;
             FileLock emailFileLock = null;
             String emailFilePath = BuildEmailFilePath();
             String emailContent = "";
@@ -517,20 +520,33 @@ public class Indexter {
                 emailContent += "\n";
             }
             if (!"".equals(emailContent)) {
+                // use trylock()
                 try {
                     emailFile = new RandomAccessFile(emailFilePath, "rw");
-                    FileChannel emailFileChannel = emailFile.getChannel();
-                    emailFileLock = emailFileChannel.lock();
+                    emailFileChannel = emailFile.getChannel();
+
+                    while (true) {
+                        try {
+                            emailFileLock = emailFileChannel.tryLock();
+                            break;
+                        } catch (Exception e) {
+                            System.out.println("Thread: " + threadID + " sleep 10ms (Other thread is using the file)");
+                            sleep(10);
+                        }
+                    }
+
                     emailFile.seek(emailFile.length());
                     emailFile.write(emailContent.getBytes());
                     emailFileLock.release();
                     emailFileChannel.close();
                     emailFile.close();
+                } catch (FileNotFoundException e) {
+                    System.out.println("There is no EMAIL file");
+                    return;
                 } catch (IOException e) {
-                    System.out.println("There is IOException when write email information");
-                } catch (OverlappingFileLockException e) {
-                    System.out.println("There is OverlappingFileLockException when write email information");
-                    System.out.println("Thread: " + threadID + ";");
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -550,25 +566,36 @@ public class Indexter {
                 }
                 String filePath = BuildWordFilePath(key);
                 RandomAccessFile file = null;
+                FileChannel fileChannel = null;
                 FileLock fileLock = null;
+
+                // use trylock()
                 try {
-                    // read and write model, can create file if file doesn't exit
                     file = new RandomAccessFile(filePath, "rw");
-                    FileChannel fileChannel = file.getChannel();
-                    // use lock() not tryLock(), so if fileLock is occupied by other threads
-                    // this thread will be blocked and wait until fileLock is released
-                    fileLock = fileChannel.lock();
+                    fileChannel = file.getChannel();
+
+                    while (true) {
+                        try {
+                            fileLock = fileChannel.lock();
+                            break;
+                        } catch (Exception e) {
+                            System.out.println("Thread: " + threadID + " sleep 10ms (Other thread is using the file)");
+                            sleep(10);
+                        }
+                    }
+
                     file.seek(file.length());
                     file.write(content.getBytes());
                     fileLock.release();
                     fileChannel.close();
                     file.close();
+                } catch (FileNotFoundException e) {
+                    System.out.println("There is no EMAIL file");
+                    return;
                 } catch (IOException e) {
                     System.out.println("There is IOException when write token information");
-                    System.out.println("Token: " + key);
-                } catch (OverlappingFileLockException e) {
-                    System.out.println("There is OverlappingFileLockException when write token information");
-                    System.out.println("Thread: " + threadID + "; " + "Token: " + key);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
