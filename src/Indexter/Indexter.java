@@ -1,5 +1,6 @@
 package Indexter;
 
+
 import org.tartarus.snowball.ext.englishStemmer;
 
 import javax.mail.internet.AddressException;
