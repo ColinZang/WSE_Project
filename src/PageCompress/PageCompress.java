@@ -169,32 +169,36 @@ public class PageCompress {
         if (hasSpecialPunc) {
             return modifyContent;
         } else {
-            // flag: true means is in <>; false means not in <>
-            boolean flag = false;
-            int count = 0;
-            String res = "";
-            for (int i = 0; i < modifyContent.length(); i++) {
-                if (flag) {
-                    if (modifyContent.charAt(i) == '>') {
-                        count--;
-                        if (count == 0) {
-                            flag = false;
+            if (modifyContent.indexOf("<") != -1 && modifyContent.indexOf(">") != -1) {
+                // flag: true means is in <>; false means not in <>
+                boolean flag = false;
+                int count = 0;
+                String res = "";
+                for (int i = 0; i < modifyContent.length(); i++) {
+                    if (flag) {
+                        if (modifyContent.charAt(i) == '>') {
+                            count--;
+                            if (count == 0) {
+                                flag = false;
+                            }
+                        } else if (modifyContent.charAt(i) == '<'){
+                            count++;
+                        } else {
+                            continue;
                         }
-                    } else if (modifyContent.charAt(i) == '<'){
-                        count++;
                     } else {
-                        continue;
-                    }
-                } else {
-                    if (modifyContent.charAt(i) == '<') {
-                        count++;
-                        flag = true;
-                    } else {
-                        res += modifyContent.charAt(i);
+                        if (modifyContent.charAt(i) == '<') {
+                            count++;
+                            flag = true;
+                        } else {
+                            res += modifyContent.charAt(i);
+                        }
                     }
                 }
+                return res;
+            } else {
+                return modifyContent;
             }
-            return res;
         }
     }
 }
