@@ -1,17 +1,25 @@
 # WebCrawler
 
-1. To compile and run, cd to src folder: 
+USAGE: java Crawler [-path savePath] [-max searchLimit] [-id jobID]
 
-   javac WebCrawler/Crawler.java
+Please pay attention:
 
-   java WebCrawler/Crawler -root [seedFile] -path [resultFolder] -max [searchLimit]
+This program assumes that under the directory variable 'savePath' the user provides,
 
-   For example:
+the following two sub-directories have been created: (please use the same capitalization)
 
-   java WebCrawler/Crawler -root ../result/SeedExtractor/seedResult.txt
-                           -path ../result/WebCrawler
-                           -max 10000
+a directory called 'hashSets', containing the external hashSets from last round, or empty if it's the first round,
 
-2. Please remember to clear the result folder before each run, or change to another folder. Otherwise, the external hashset generated from last run still exists and the crawler will stop very early.
+a directory called 'roots', containing url root files named as 'root_1', 'root_2'... the number of such files
 
-3. The crawler might be slow sometimes, it becomes more stable after downloading the first 1000 pages. The search limit is an approximation, you can manually stop the program.
+should be the same with the number of rounds the program to be run, so if we plan to run the program
+
+200 times, then the files 'root_1' - 'root_200' should all exist in this directory.
+
+For example, to compile and run: (please cd to src)
+
+javac WebCrawler/Crawler.java
+
+java WebCrawler/Crawler -path ../results/ -max 2500 -id 1
+
+ 

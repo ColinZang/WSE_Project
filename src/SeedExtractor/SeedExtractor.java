@@ -11,17 +11,21 @@ import java.util.*;
 
 
 public class SeedExtractor {
+    private boolean NIGHTMODEL;
     private String filePath;
     private String phpPath;
     private String resultPath;
 
-    private int MaxPages = 20;
+    private int MaxPages = 12;
     private boolean DEBUG = false;
 
     // Google API limitation: each time call php, can only get 4 resutlts
     private static final int APILimit = 4;
 
+    private static final int blockBound = 8;
+
     public SeedExtractor() {
+        NIGHTMODEL = true;
         MaxPages = 20;
         DEBUG = false;
         filePath = "/Users/ChenChen/Documents/IntelliJ_Workspace/WSE_Project/data/SeedExtracter/quertlist";
@@ -32,7 +36,8 @@ public class SeedExtractor {
     private void Process() {
         int lineCount = 0;
         String curLine = "";    // current query
-        List<MyPage> results = new ArrayList<MyPage>();     //final results
+
+        int blockCount = 0;
 
         try {
             InputStreamReader read = new InputStreamReader(new FileInputStream(new File(filePath)), "UTF-8");
@@ -46,8 +51,11 @@ public class SeedExtractor {
 
                 System.out.println("Line " + lineCount + ": " + curLine);
 
+                List<MyPage> oneQueryResult = new ArrayList<MyPage>();
+
                 for (int startIndex = 0; startIndex < MaxPages; startIndex+=APILimit) {
                     String phpResult = ExecPHP(curLine, startIndex);
+
                     List<MyPage> oneCallResult = ExtractPHPResults(phpResult);
 
                     // is PHP result has something wrong (PHP call fail),
@@ -55,6 +63,24 @@ public class SeedExtractor {
                     // there are a lot of reasons to make PHP call fail
                     // common one is Google identify you are crawling him and temparaly black you
                     if (oneCallResult.isEmpty()) {
+                        // it means Google already get you and block your IP
+                        blockCount++;
+                        System.out.println("Google catch you. Sleep a while!");
+                        System.out.println("Query: " + curLine + "; Start: " + startIndex + "; get no results!");
+
+                        if (NIGHTMODEL) {
+                            long sleepTime = 1000 * 60 * blockCount * 2;
+                            Thread.currentThread().sleep(sleepTime);
+                        } else {
+                            Thread.currentThread().sleep(5000);
+                        }
+
+                        // if block count is to large, reset it
+                        // otherwise, the program will wait very long
+                        if (blockCount > blockBound) {
+                            blockCount = 1;
+                        }
+                        // roll back to do it again
                         startIndex -= APILimit;
                         continue;
                     }
@@ -68,9 +94,9 @@ public class SeedExtractor {
                         }
                     }
 
-                    results.addAll(oneCallResult);
+                    oneQueryResult.addAll(oneCallResult);
 
-                    // in order to respect Google, thread will sleep 1s after each call php
+                    // in order to respect Google, thread will sleep a while after each call php
                     // to be hones, even I don't respect Google, I also need to sleep for a while
                     // otherwise, Google will block you with high posibility
                     // last round, we don't have to sleep at here
@@ -78,12 +104,16 @@ public class SeedExtractor {
                         Thread.currentThread().sleep(3000);
                     }
                 }
+
+                StoreResults(oneQueryResult);
+
+
+                // reset
+                blockCount = 0;
                 // after cralwing each query, we sleep a longer while
                 Thread.currentThread().sleep(5000);
                 System.out.println("done");
             }
-
-            StoreResults(results);
 
         } catch (MalformedURLException e) {
             System.out.println("Cannot generate URL from URLstr");
@@ -252,10 +282,11 @@ public class SeedExtractor {
                 file.createNewFile();
             }
 
-            FileWriter fw = new FileWriter(file.getAbsoluteFile());
+            FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
             BufferedWriter bw = new BufferedWriter(fw);
             bw.write(content);
             bw.close();
+            fw.close();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -264,14 +295,14 @@ public class SeedExtractor {
 
     /*
      * args can at least has 3 parameter, as most has 5 parameter
-     * [file path], [php script path], [result folder path], [MaxPages#], [DEBUG]
+     * [file path], [php script path], [result folder path], [MaxPages#], [NIGHTMODEL], [DEBUG]
      *
      * default value:
-     * MaxPages = 20, DEBUG = false
+     * MaxPages = 12, DEBUG = false
      * -f means: DEBUG = true, otherwise(include empty) DEBUG = false
      */
     public static void main(String[] args) {
-        if (args.length < 3) {
+        if (args.length < 4) {
             System.out.println("You should give paths for your query list and php script");
             System.exit(1);
         }
@@ -287,9 +318,28 @@ public class SeedExtractor {
 
         if (args.length > 4) {
             String flag = args[4];
+            if (flag.equals("-off")) {
+                se.NIGHTMODEL = false;
+            }
+        }
+
+        if (args.length > 5) {
+            String flag = args[5];
             if (flag.equals("-f")) {
                 se.DEBUG = true;
             }
+        }
+
+        File dir = new File(se.resultPath);
+        if (!dir.isDirectory()) {
+            System.out.println("Wrong: resultPath is not a directory!");
+            System.exit(1);
+        }
+
+        // if old result didn't delete, then delete it first
+        File file = new File(dir.getAbsolutePath() + "/seedResult.txt");
+        if (file.exists() && file.isFile()) {
+            file.delete();
         }
 
         se.Process();
