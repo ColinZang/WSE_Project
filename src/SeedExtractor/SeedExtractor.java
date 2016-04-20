@@ -28,9 +28,9 @@ public class SeedExtractor {
         NIGHTMODEL = true;
         MaxPages = 20;
         DEBUG = false;
-        filePath = "/Users/ChenChen/Documents/IntelliJ_Workspace/WSE_Project/data/SeedExtracter/quertlist";
-        phpPath = "/Users/ChenChen/Documents/IntelliJ_Workspace/WSE_Project/src/SeedExtractor/GoogleCrawler.php";
-        resultPath = "/Users/ChenChen/Documents/IntelliJ_Workspace/WSE_Project/result/SeedExtracter/";
+        filePath = "/Users/BINLI/IdeaProjects/WSE_Project/data/SeedExtractor/quertlist";
+        phpPath = "/Users/BINLI/IdeaProjects/WSE_Project/src/SeedExtractor/GoogleCrawler.php";
+        resultPath = "/Users/BINLI/Documents/Course/Web-Search-Engine/Project";
     }
 
     private void Process() {
@@ -139,7 +139,6 @@ public class SeedExtractor {
         if (DEBUG) {
             System.out.println("After encoding query: " + query);
         }
-
         BufferedReader input = null;
         String content = "";
         try {
