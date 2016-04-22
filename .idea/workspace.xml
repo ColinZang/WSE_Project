@@ -6,8 +6,6 @@
       <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/Retriever/Retriever.java" />
       <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/Retriever/Sequence.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/WSE_Project.iml" afterPath="$PROJECT_DIR$/WSE_Project.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/PageRank/PageRank.java" afterPath="$PROJECT_DIR$/src/PageRank/PageRank.java" />
     </list>
     <ignored path="WSE_Project.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -954,7 +952,14 @@
       <option name="project" value="LOCAL" />
       <updated>1461104405692</updated>
     </task>
-    <option name="localTasksCounter" value="37" />
+    <task id="LOCAL-00037" summary="The version in use">
+      <created>1461344011671</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1461344011671</updated>
+    </task>
+    <option name="localTasksCounter" value="38" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -1023,7 +1028,8 @@
     <MESSAGE value="Not test yet" />
     <MESSAGE value="Added page length" />
     <MESSAGE value="Fixed some bugs in PageRank" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed some bugs in PageRank" />
+    <MESSAGE value="The version in use" />
+    <option name="LAST_COMMIT_MESSAGE" value="The version in use" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
