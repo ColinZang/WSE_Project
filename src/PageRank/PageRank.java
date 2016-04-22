@@ -116,7 +116,7 @@ public class PageRank {
                     }
                     processPage(id, thisUrl, subUrls, length);
                     count++;
-                    System.out.println("processed " + count + " pages");
+                    //System.out.println("processed " + count + " pages");
                     readFile.close();
                 }
             }
