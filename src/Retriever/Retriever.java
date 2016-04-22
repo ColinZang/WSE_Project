@@ -93,11 +93,11 @@ public class Retriever {
             }
             else {
                 String word = query.substring(left, right);
-                // use word.toLowerCase()?
-                if (!stopList.contains(word)) {
+                // use word.toLowerCase()
+                if (!stopList.contains(word.toLowerCase())) {
                     queryWords.add(word);
                 }
-                if (stopList.contains(word) || right == query.length()) {
+                if (stopList.contains(word.toLowerCase()) || right == query.length()) {
                     List<Sequence> temp = genSeq(lastProcessed + 1, queryWords.size() - 1);
                     for (Sequence seq: temp) {
                         seqList.add(seq);
@@ -195,7 +195,7 @@ public class Retriever {
     private static HashSet<Page> readIndex(Sequence seq) {
         HashSet<Page> pageSet = new HashSet<Page>();
         String word = seq.getToken();
-        word = StemEnglishWord(word).toLowerCase();
+        word = StemEnglishWord(word.toLowerCase());
         int count = 0;
         try {
             if (!indexPath.endsWith(File.separator)) {

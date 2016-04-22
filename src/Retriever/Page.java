@@ -26,6 +26,39 @@ public class Page {
         parsePage(pagePath);
     }
 
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return title + "\n" + url + "\n" + preview + "\n";
+    }
+
+    public String getID() {
+        return id;
+    }
+
+    public void calculateScore(String token, double wordWeight) {
+        int lowerCount = getCount(token.toLowerCase(), lowerContent);
+        if (lowerCount == 0) {
+            return;
+        }
+        int originalCount = getCount(token, content);
+        lowerCount = lowerCount - originalCount;
+        double originalScore = formula(wordWeight, originalCount);
+        double lowerScore = formula(wordWeight, lowerCount);
+        final double weight = 1.5;
+        double addedScore = weight * originalScore + lowerScore;
+        dependencyScore += addedScore;
+    }
+
+    public double finalScore() {
+        final double weight = 1.5E7;
+        return dependencyScore + weight * pageRank;
+    }
+
     private void parsePage(String pagePath) {
         int first = id.indexOf('_', 0);
         int second = id.indexOf('_', first + 1);
@@ -62,34 +95,6 @@ public class Page {
         }
     }
 
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return title + "\n" + url + "\n" + preview + "\n";
-    }
-
-    public String getID() {
-        return id;
-    }
-
-    public void calculateScore(String token, double wordWeight) {
-        int lowerCount = getCount(token.toLowerCase(), lowerContent);
-        if (lowerCount == 0) {
-            return;
-        }
-        int originalCount = getCount(token, content);
-        lowerCount = lowerCount - originalCount;
-        double originalScore = formula(wordWeight, originalCount);
-        double lowerScore = formula(wordWeight, lowerCount);
-        final double weight = 1.5;
-        double addedScore = weight * originalScore + lowerScore;
-        dependencyScore += addedScore;
-    }
-
     private int getCount(String token, String content) {
         int index = 0;
         int count = 0;
@@ -114,10 +119,5 @@ public class Page {
         }
         double score = 1 + Math.log(count) / Math.log(2);
         return score * wordWeight;
-    }
-
-    public double finalScore() {
-        final double weight = 1.5E7;
-        return dependencyScore + weight * pageRank;
     }
 }
