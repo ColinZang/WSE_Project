@@ -123,7 +123,7 @@ public class Parser {
                         }
 
                         LDPClass tempLDPClass = GetLDPClass(modifySmallToken);
-                        if (!ldpClass.hasLetter) {
+                        if (!tempLDPClass.hasLetter) {
                             resTokens.add(modifySmallToken);
                             tokensType.add("NUM");
                             continue;
