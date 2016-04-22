@@ -4,14 +4,9 @@ package Indexter;
 import Parser.Parser;
 import org.tartarus.snowball.ext.englishStemmer;
 
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.channels.OverlappingFileLockException;
 import java.util.*;
 
 import static java.lang.Thread.sleep;
@@ -34,11 +29,6 @@ public class Indexter {
 
     private static final int    WORDS_MAP_THRESHOLD = 10000;
     private static final int    EMAIL_MAP_THRESHOLD = 1000;
-    private static final int    DIFF_DIGIT_LETTER       = 5;
-    private static final int    TOKEN_LENGTH_THRESHOLD  = 30;
-    private static final String DELIMS_1            = "[ \n\r\t ]+";
-    private static final String DELIMS_2            = "[~#%&*{}\\:<>?/|!$=+;_()\'\"^]+";
-    private static final String IS_ENGLISH_REGEX    = "^[ \\w \\d \\s \\. \\& \\+ \\- \\, \\! \\@ \\# \\$ \\% \\^ \\* \\( \\) \\; \\\\ \\/ \\| \\< \\> \\\" \\' \\? \\= \\: \\[ \\] ]*$";
 
     Indexter(String mp, String rp, String sp, int ctn, int cjn, int tn, boolean numModel) {
         mainPath = mp;
@@ -283,75 +273,6 @@ public class Indexter {
                 e.printStackTrace();
             }
             return content;
-        }
-
-        /*
-         * filter punctuations at token's head and tail
-         * e.g. tomorrow. -> tomorrow       "aaa" -> aaa
-         * if token only has punctuation or other language character, return ""
-         */
-        private String FilterTwoSidePunctuation(String token) {
-            int begin = 0;
-            int end = token.length() - 1;
-            while (begin < token.length()) {
-                if (!Character.isLetterOrDigit(token.charAt(begin))) {
-                    begin++;
-                } else {
-                    break;
-                }
-            }
-            while (end >= 0) {
-                if (!Character.isLetterOrDigit(token.charAt(end))) {
-                    end--;
-                } else {
-                    break;
-                }
-            }
-            if (begin <= end) {
-                return token.substring(begin, end+1);
-            } else {
-                return "";
-            }
-        }
-
-        /*
-         * Check whether string is valid URL
-         */
-        private boolean IsValidURL(String token) {
-            boolean result = true;
-            try {
-                URL url = new URL(token);
-            } catch (MalformedURLException e) {
-                result = false;
-            }
-            return result;
-        }
-
-        /*
-         * Check whether string is a email address
-         */
-        private boolean IsValidEmailAddress(String token) {
-            boolean result = true;
-            try {
-                InternetAddress emailAddr = new InternetAddress(token);
-                emailAddr.validate();
-            } catch (AddressException ex) {
-                result = false;
-            } catch (Exception e) {
-                result = false;
-            }
-            return result;
-        }
-
-        /*
-         * use regular expression to check whether text only contains letter, digit and punctuation
-         * it can filter other language and too special characters
-         */
-        private boolean isEnglish(String text) {
-            if (text == null) {
-                return false;
-            }
-            return text.matches(IS_ENGLISH_REGEX);
         }
 
         /*
