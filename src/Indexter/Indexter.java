@@ -1,15 +1,12 @@
 package Indexter;
 
+
+import Parser.Parser;
 import org.tartarus.snowball.ext.englishStemmer;
 
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.channels.OverlappingFileLockException;
 import java.util.*;
 
 import static java.lang.Thread.sleep;
@@ -32,11 +29,6 @@ public class Indexter {
 
     private static final int    WORDS_MAP_THRESHOLD = 10000;
     private static final int    EMAIL_MAP_THRESHOLD = 1000;
-    private static final int    DIFF_DIGIT_LETTER       = 5;
-    private static final int    TOKEN_LENGTH_THRESHOLD  = 30;
-    private static final String DELIMS_1            = "[ \n\r\t ]+";
-    private static final String DELIMS_2            = "[~#%&*{}\\:<>?/|!$=+;_()\'\"^]+";
-    private static final String IS_ENGLISH_REGEX    = "^[ \\w \\d \\s \\. \\& \\+ \\- \\, \\! \\@ \\# \\$ \\% \\^ \\* \\( \\) \\; \\\\ \\/ \\| \\< \\> \\\" \\' \\? \\= \\: \\[ \\] ]*$";
 
     Indexter(String mp, String rp, String sp, int ctn, int cjn, int tn, boolean numModel) {
         mainPath = mp;
@@ -217,116 +209,35 @@ public class Indexter {
                 return;
             }
 
-            // we need use split method twice
-            // first use " " to split whose content
-            // then use special characters to split token
-            // the reason do make this design is that using other character to splic content
-            // might broken a whole token, such as URL
-            // be careful, in DELIMS_1 the first space " " is different with the last space " "
-            String[] tokens = content.split(DELIMS_1);
-            for (String token : tokens) {
-                // 1. first delete useless chars at token's head and tail
-                // also can filter those token which are not english word
-                // 2. then transfer to lower case
-                String tempToken = FilterTwoSidePunctuation(token);
-                tempToken = tempToken.toLowerCase();
-
-                // 3. check if token is in stop words list
-                if (STOP_WORDS_MODEL) {
-                    if (StopWordList.contains(tempToken)) {
+            Parser parser = new Parser(content, StopWordList);
+            parser.Parse();
+            List<String> resTokens = parser.GetResTokens();
+            List<String> tokensType = parser.GetTokensType();
+            for (int i = 0; i < resTokens.size(); i++) {
+                if (tokensType.get(i).equals("NUM")) {
+                    if (NO_NUM_MODEL) {
                         continue;
+                    } else {
+                        PutIntoWordsPostingList(resTokens.get(i), pageID);
                     }
-                }
-
-                // 4. check if it is URL (don't store URL)
-                if (IsValidURL(tempToken)) {
-                    continue;
-                }
-
-                // 5. check if it is email address
-                // if it is email address, store it to a special file
-                // which is only for email
-                // the file name is "EMAIL" and the format is:
-                // email    pageID (same line, seperator: \t)
-                // (we can consider give "EMAIL" a special file extension) ???
-                if (IsValidEmailAddress(tempToken)) {
-                    PutIntoEmailPostingList(tempToken, pageID);
-                }
-
-                // we can use ldpClass to know the statistic value of token for letter, digit and punctuation
-                LDPClass ldpClass = GetLDPClass(token);
-
-                // 6. check if doesn't has letter
-                // e.g. 12:30
-                if (NO_NUM_MODEL && !ldpClass.hasLetter) {
-                    continue;
-                }
-
-                // 7. check if token only contains english characters, digits and punctuation
-                if (!isEnglish(tempToken)) {
-                    continue;
-                }
-
-                // 8. skip the case that token only has digit and letter,
-                // and the number of digit is much more than that of letter
-                // 9. or the length of token is over-long
-                if (!ldpClass.hasPunctuation) {
-                    int diff = ldpClass.digitNum - ldpClass.letterNum;
-                    if (diff >= DIFF_DIGIT_LETTER) {
+                } else if (tokensType.get(i).equals("EMAIL")) {
+                    PutIntoEmailPostingList(resTokens.get(i).toLowerCase(), pageID);
+                } else if (tokensType.get(i).equals("WORD")) {
+                    String tempStr = resTokens.get(i).toLowerCase();
+                    tempStr = StemEnglishWord(tempStr);
+                    PutIntoWordsPostingList(tempStr, pageID);
+                } else if (tokensType.get(i).equals("URL")) {
+                    // do nothing
+                } else if (tokensType.get(i).equals("STOPWORD")) {
+                    if (STOP_WORDS_MODEL) {
                         continue;
-                    }
-                    if (ldpClass.letterNum + ldpClass.digitNum > TOKEN_LENGTH_THRESHOLD) {
-                        continue;
-                    }
-                }
-
-                // second place to use split
-                // since we already make sure that the token is not email and url
-                // use characters are not allowed to use in file or folder name: ~#%&*{}\:<>?/|
-                // and use characters is not valid in english word such as + ;
-                // cannot use ",", because number can have it like 100,000
-                if (ldpClass.hasPunctuation) {
-                    String[] smallTokens = tempToken.split(DELIMS_2);
-                    if (smallTokens.length > 1) {
-                        for (String smallToken : smallTokens) {
-                            // for each smallToken, do the same thing again
-                            String modifySmallToken = FilterTwoSidePunctuation(smallToken);
-
-                            if (STOP_WORDS_MODEL) {
-                                if (StopWordList.contains(modifySmallToken)) {
-                                    continue;
-                                }
-                            }
-
-                            LDPClass tempLDPClass = GetLDPClass(modifySmallToken);
-
-                            if (NO_NUM_MODEL && !tempLDPClass.hasLetter) {
-                                continue;
-                            }
-
-                            if (!isEnglish(modifySmallToken)) {
-                                continue;
-                            }
-
-                            if (!tempLDPClass.hasPunctuation) {
-                                int tempDiff = tempLDPClass.digitNum - tempLDPClass.letterNum;
-                                if (tempDiff >= DIFF_DIGIT_LETTER) {
-                                    continue;
-                                }
-                                if (tempLDPClass.letterNum + tempLDPClass.digitNum > TOKEN_LENGTH_THRESHOLD) {
-                                    continue;
-                                }
-                            }
-
-                            modifySmallToken = StemEnglishWord(modifySmallToken);
-                            PutIntoWordsPostingList(modifySmallToken, pageID);
-                        }
-                        continue;
+                    } else {
+                        String tempStr = resTokens.get(i).toLowerCase();
+                        tempStr = StemEnglishWord(tempStr);
+                        PutIntoWordsPostingList(tempStr, pageID);
                     }
                 } else {
-                    // if second delims doesn't splice the token
-                    tempToken = StemEnglishWord(tempToken);
-                    PutIntoWordsPostingList(tempToken, pageID);
+                    System.out.println("Token type is wrong: " + tokensType.get(i));
                 }
             }
         }
@@ -362,94 +273,6 @@ public class Indexter {
                 e.printStackTrace();
             }
             return content;
-        }
-
-        /*
-         * filter punctuations at token's head and tail
-         * e.g. tomorrow. -> tomorrow       "aaa" -> aaa
-         * if token only has punctuation or other language character, return ""
-         */
-        private String FilterTwoSidePunctuation(String token) {
-            int begin = 0;
-            int end = token.length() - 1;
-            while (begin < token.length()) {
-                if (!Character.isLetterOrDigit(token.charAt(begin))) {
-                    begin++;
-                } else {
-                    break;
-                }
-            }
-            while (end >= 0) {
-                if (!Character.isLetterOrDigit(token.charAt(end))) {
-                    end--;
-                } else {
-                    break;
-                }
-            }
-            if (begin <= end) {
-                return token.substring(begin, end+1);
-            } else {
-                return "";
-            }
-        }
-
-        /*
-         * Check whether string is valid URL
-         */
-        private boolean IsValidURL(String token) {
-            boolean result = true;
-            try {
-                URL url = new URL(token);
-            } catch (MalformedURLException e) {
-                result = false;
-            }
-            return result;
-        }
-
-        /*
-         * do statistic analysis for token
-         */
-        private LDPClass GetLDPClass(String token) {
-            int ln = 0;
-            int dn = 0;
-            int pn = 0;
-            for (int i = 0; i < token.length(); i++) {
-                if (Character.isDigit(token.charAt(i))) {
-                    dn++;
-                } else if (Character.isLetter(token.charAt(i))) {
-                    ln++;
-                } else {
-                    pn++;
-                }
-            }
-            return new LDPClass(ln, dn, pn);
-        }
-
-        /*
-         * Check whether string is a email address
-         */
-        private boolean IsValidEmailAddress(String token) {
-            boolean result = true;
-            try {
-                InternetAddress emailAddr = new InternetAddress(token);
-                emailAddr.validate();
-            } catch (AddressException ex) {
-                result = false;
-            } catch (Exception e) {
-                result = false;
-            }
-            return result;
-        }
-
-        /*
-         * use regular expression to check whether text only contains letter, digit and punctuation
-         * it can filter other language and too special characters
-         */
-        private boolean isEnglish(String text) {
-            if (text == null) {
-                return false;
-            }
-            return text.matches(IS_ENGLISH_REGEX);
         }
 
         /*
@@ -530,8 +353,8 @@ public class Indexter {
                             emailFileLock = emailFileChannel.tryLock();
                             break;
                         } catch (Exception e) {
-                            System.out.println("Thread: " + threadID + " sleep 10ms (Other thread is using the file)");
-                            sleep(10);
+                            System.out.println("Thread: " + threadID + " sleep 20ms (Other thread is using the file)");
+                            sleep(20);
                         }
                     }
 

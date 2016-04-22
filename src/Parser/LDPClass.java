@@ -1,4 +1,4 @@
-package Indexter;
+package Parser;
 
 /**
  * Created by ChenChen on 4/17/16.
