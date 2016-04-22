@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="Add PageRank to Index">
+    <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Retriever/Page.java" afterPath="$PROJECT_DIR$/src/Retriever/Page.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Retriever/Retriever.java" afterPath="$PROJECT_DIR$/src/Retriever/Retriever.java" />
     </list>
     <ignored path="WSE_Project.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -39,8 +37,8 @@
       <file leaf-file-name="Retriever.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/Retriever/Retriever.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="272">
-              <caret line="386" column="73" selection-start-line="386" selection-start-column="73" selection-end-line="386" selection-end-column="73" />
+            <state relative-caret-position="182">
+              <caret line="380" column="40" selection-start-line="380" selection-start-column="40" selection-end-line="380" selection-end-column="40" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -560,7 +558,14 @@
       <option name="project" value="LOCAL" />
       <updated>1461288760331</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="Minor Change">
+      <created>1461360227098</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1461360227098</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -616,7 +621,8 @@
     <MESSAGE value="Minor change: the program will take a new url root file each time, and will not save urls to disk in the end" />
     <MESSAGE value="1. Create separate directory for each thread, remove global count lock, 2. Changed the program for running multiple rounds" />
     <MESSAGE value="Add PageRank to Index" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add PageRank to Index" />
+    <MESSAGE value="Minor Change" />
+    <option name="LAST_COMMIT_MESSAGE" value="Minor Change" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -1011,8 +1017,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Retriever/Retriever.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="272">
-          <caret line="386" column="73" selection-start-line="386" selection-start-column="73" selection-end-line="386" selection-end-column="73" />
+        <state relative-caret-position="182">
+          <caret line="380" column="40" selection-start-line="380" selection-start-column="40" selection-end-line="380" selection-end-column="40" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
