@@ -261,7 +261,7 @@ public class Crawler {
                     newUrls = rmSameDomain(newUrls);
                     // save page to disk
                     try {
-                        savePage(fileName, url, newUrls, pageFile.getCount(), pageFile.getTitle(),
+                        savePage(fileName, url, newUrls, pageFile.getWordsCount(), pageFile.getTitle(),
                                 pageFile.getContent(), threadID);
                     } catch (IOException e) {
                         output("save page " + fileName + " not successfully");
