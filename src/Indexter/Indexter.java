@@ -402,8 +402,8 @@ public class Indexter {
                             fileLock = fileChannel.lock();
                             break;
                         } catch (Exception e) {
-                            System.out.println("Thread: " + threadID + " sleep 10ms (Other thread is using the file)");
-                            sleep(10);
+                            System.out.println("Thread: " + threadID + " sleep 20ms (Other thread is using the file)");
+                            sleep(20);
                         }
                     }
 
