@@ -1,5 +1,8 @@
 package Retriever;
 
+import Parser.*;
+import org.tartarus.snowball.ext.englishStemmer;
+
 import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,8 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.Collections;
-
-import org.tartarus.snowball.ext.englishStemmer;
 
 /**
  * Created by Wenzhao on 4/21/16.
@@ -38,75 +39,54 @@ public class Retriever {
             new HashMap<Sequence, HashSet<Page>>();
 
     private static void run(String query, String stopFile) {
-        if (!isEnglish(query)) {
-            System.out.println("Please enter an English query");
-            System.exit(1);
-        }
         HashSet<String> stopList = loadStop(stopFile);
         parseQuery(query, stopList);
-        if (queryWords.size() == 0) {
-            System.out.println("All query words are either invalid or stop words");
-            System.exit(1);
+        for (Sequence seq: seqList) {
+            System.out.println(seq.getLeft() + " " + seq.getRight() + " " + seq.getToken());
         }
+        System.exit(1);
         getPages();
         calculate();
         returnResults();
     }
 
     private static void parseQuery(String query, HashSet<String> stopList) {
-        // remove trailing non-alphanumeric characters
-        int index = query.length() - 1;
-        while (index >= 0) {
-            if (!Character.isLetterOrDigit(query.charAt(index))) {
-                index--;
+        Parser parser = new Parser(query, stopList);
+        parser.Parse();
+        List<String> tokens = parser.GetResTokens();
+        List<String> types = parser.GetTokensType();
+        int lastPartition = -1;
+        for (int i = 0; i < tokens.size(); i++) {
+            System.out.println(tokens.get(i) + " " + types.get(i));
+        }
+        for (int i = 0; i < tokens.size(); i++) {
+            String type = types.get(i);
+            if (type.equals("WORD")) {
+                queryWords.add(tokens.get(i));
+            }
+            else if (type.equals("EMAIL")) {
+                List<Sequence> temp = genSeq(lastPartition + 1, queryWords.size() - 1);
+                for (Sequence seq: temp) {
+                    seqList.add(seq);
+                }
+                queryWords.add(tokens.get(i));
+                lastPartition = queryWords.size() - 1;
             }
             else {
-                break;
+                List<Sequence> temp = genSeq(lastPartition + 1, queryWords.size() - 1);
+                for (Sequence seq: temp) {
+                    seqList.add(seq);
+                }
+                lastPartition = queryWords.size() - 1;
             }
         }
-        if (index < 0) {
-            return;
+        List<Sequence> temp = genSeq(lastPartition + 1, queryWords.size() - 1);
+        for (Sequence seq: temp) {
+            seqList.add(seq);
         }
-        query = query.substring(0, index + 1);
-        int left = 0;
-        int right = 0;
-        int lastProcessed = -1;
-        while (right <= query.length()) {
-            char current;
-            if (right < query.length()) {
-                current = query.charAt(right);
-            }
-            else {
-                current = '-';
-            }
-            if (Character.isLetterOrDigit(current)) {
-                right++;
-            }
-            else if (left == right) {
-                left++;
-                right++;
-            }
-            else if (current == '\'') {
-                if (right + 1 < query.length() && Character.isLetterOrDigit(query.charAt(right + 1))) {
-                    right++;
-                }
-            }
-            else {
-                String word = query.substring(left, right);
-                // use word.toLowerCase()
-                if (!stopList.contains(word.toLowerCase())) {
-                    queryWords.add(word);
-                }
-                if (stopList.contains(word.toLowerCase()) || right == query.length()) {
-                    List<Sequence> temp = genSeq(lastProcessed + 1, queryWords.size() - 1);
-                    for (Sequence seq: temp) {
-                        seqList.add(seq);
-                    }
-                    lastProcessed = queryWords.size() - 1;
-                }
-                right++;
-                left = right;
-            }
+        if (queryWords.size() == 0) {
+            System.out.println("Query contains non-English words, invalid words or are all stop words");
+            System.exit(1);
         }
         Collections.sort(seqList, new SeqComp());
     }
@@ -175,8 +155,17 @@ public class Retriever {
         }
         Collections.sort(result, new PageComp());
         int count = 0;
+        HashSet<String> seen = new HashSet<String>();
         while (count < max && count < result.size()) {
+            String url = result.get(count).getUrl();
+            if (seen.contains(url)) {
+                continue;
+            }
+            else {
+                seen.add(url);
+            }
             System.out.println(result.get(count));
+            System.out.println(result.get(count).getScoreInfo());
             count++;
         }
     }
@@ -261,18 +250,6 @@ public class Retriever {
 
     public static double calculateWeight(int count) {
         return 1 + Math.log((double)n / count) / Math.log(2);
-    }
-
-    // by Chen Chen
-    private static boolean isEnglish(String text) {
-        final String IS_ENGLISH_REGEX =
-                "^[ \\w \\d \\s \\. \\& \\+ \\- \\, \\! \\@ \\# \\$ " +
-                        "\\% \\^ \\* \\( \\) \\; \\\\ \\/ \\| \\< \\> " +
-                        "\\\" \\' \\? \\= \\: \\[ \\] ]*$";
-        if (text == null) {
-            return false;
-        }
-        return text.matches(IS_ENGLISH_REGEX);
     }
 
     // by Chen Chen

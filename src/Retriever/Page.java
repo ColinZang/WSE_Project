@@ -16,9 +16,11 @@ public class Page {
     private String url;
     private String title;
     private double dependencyScore;
+    private double totalScore;
     private int length;
     private String preview = " ";
     private int previewTokenSize = 0;
+    private String scoreInfo = "";
 
     public Page(String id, double pageRank, String pagePath) {
         this.id = id;
@@ -40,9 +42,19 @@ public class Page {
         return id;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
+    public String getScoreInfo() {
+        return scoreInfo + "Dependency Score=" + dependencyScore + " pageRank=" + pageRank +
+                " total=" + totalScore + "\n";
+    }
+
     public void calculateScore(String token, double wordWeight) {
         int lowerCount = getCount(token.toLowerCase(), lowerContent);
         if (lowerCount == 0) {
+            scoreInfo += "Token: " + token + " Original=0 Lower=0 WordWeight=" + wordWeight + " wordTotal=0\n";
             return;
         }
         int originalCount = getCount(token, content);
@@ -51,12 +63,15 @@ public class Page {
         double lowerScore = formula(wordWeight, lowerCount);
         final double weight = 1.5;
         double addedScore = weight * originalScore + lowerScore;
+        scoreInfo += "Token: " + token + " Original=" + originalScore + " Lower=" + lowerScore +
+                 " WordWeight=" + wordWeight + " wordTotal=" + addedScore + "\n";
         dependencyScore += addedScore;
     }
 
     public double finalScore() {
         final double weight = 1.5E7;
-        return dependencyScore + weight * pageRank;
+        totalScore = dependencyScore + weight * pageRank;
+        return totalScore;
     }
 
     private void parsePage(String pagePath) {
