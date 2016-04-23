@@ -42,6 +42,10 @@ public class Parser {
             // delete useless chars at token's head and tail
             // also can filter those token which are not english word
             String tempToken = FilterTwoSidePunctuation(token);
+            // it is possible that after filter two side punctuation, temptoken becomes ""
+            if ("".equals(tempToken)) {
+                continue;
+            }
 
             // stop word list
             if (StopWordList.contains(tempToken.toLowerCase())) {
@@ -137,18 +141,33 @@ public class Parser {
                             if (tempLDPClass.letterNum + tempLDPClass.digitNum > TOKEN_LENGTH_THRESHOLD) {
                                 continue;
                             }
+                        } else {
+                            // if token has punctuation (actually only has "-" or "'" now)
+                            // we just consider diff between num of digits and that of letter
+                            int tempDiff = tempLDPClass.digitNum - tempLDPClass.letterNum;
+                            if (tempDiff >= DIFF_DIGIT_LETTER) {
+                                continue;
+                            }
                         }
 
                         resTokens.add(modifySmallToken);
                         tokensType.add("WORD");
                     }
+                } else {
+                    // until know, we can sure that punctuations that the token has
+                    // only include "-" or "'"
+                    int tempDiff = ldpClass.digitNum - ldpClass.letterNum;
+                    if (tempDiff >= DIFF_DIGIT_LETTER) {
+                        continue;
+                    }
+                    resTokens.add(smallTokens[0]);
+                    tokensType.add("WORD");
                 }
             } else {
                 // if second delims doesn't splice the token
                 resTokens.add(tempToken);
                 tokensType.add("WORD");
             }
-
         }
     }
 
