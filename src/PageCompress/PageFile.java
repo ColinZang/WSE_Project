@@ -38,4 +38,13 @@ public class PageFile {
     public List<String> getSubURLs() {
         return subURLs;
     }
+
+    public int getWordsCount() {
+        if (content == null || "".equals(content)) {
+            return 0;
+        } else {
+            String[] words = content.split("\\s+");
+            return words.length;
+        }
+    }
 }

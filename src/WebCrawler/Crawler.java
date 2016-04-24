@@ -15,9 +15,9 @@ import java.nio.file.Paths;
  * download "jsoup-1.8.3.jar". For example, to compile and run, please cd to the parent directory and type:
  * javac -cp "../lib/jsoup-1.8.3.jar" PageCompress/*.java
  * javac -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/*.java
- * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 300 -id 1
+ * java -cp "../lib/jsoup-1.8.3.jar:." WebCrawler/Crawler -path ../results -time 5 -id 1
  *
- * 3) The unit of duration is second. Search limit is not used because it may never be reached.
+ * 3) The unit of duration is minute. Search limit is not used because it may never be reached.
  *
  * 4) Under the directory variable 'savePath' the user provides, the following two sub-directories should have
  * been created before running: (please use the same capitalization)
@@ -30,23 +30,24 @@ import java.nio.file.Paths;
 public class Crawler {
     private static final String USAGE = "USAGE: java Crawler [-path savePath] [-time duration] [-id jobID]";
     private static String savePath;
-    private static long duration;
     private static int jobID;
+    private static final int MAX_DEPTH = 4;
     private static UrlQueue urlQueue =
             new UrlQueue();
-    private static HashMap<Integer, HashSet<URI>> internalHashMap =
-            new HashMap<Integer, HashSet<URI>>();
+    private static HashMap<Integer, HashSet<MyURI>> internalHashMap =
+            new HashMap<Integer, HashSet<MyURI>>();
+    private static List<MyURI> nextRoots = new ArrayList<MyURI>();
     private static int searchLimit = 20000;
     private static int pageCount = 0;
-    private final static int THREAD_COUNT = 1500;
+    private static final int THREAD_COUNT = 1500;
     private static final int EXTERNAL_HASHSET_COUNT = 1000;
     private static final Object[] INTERNAL_HASHSET_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
+    private static final Object NEXT_ROOTS_LOCK = new Object();
     private static long startTime;
+    private static long duration;
     private static BufferedWriter logWriter;
     private static final Object LOG_WRITER_LOCK = new Object();
-    private static BufferedWriter[] idWriter = new BufferedWriter[EXTERNAL_HASHSET_COUNT];
     private static BufferedWriter[] urlWriter = new BufferedWriter[EXTERNAL_HASHSET_COUNT];
-    private static final Object[] ID_WRITER_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
     private static final Object[] URI_WRITER_LOCK = new Object[EXTERNAL_HASHSET_COUNT];
 
     /**
@@ -68,12 +69,11 @@ public class Crawler {
         // initialize locks
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
             INTERNAL_HASHSET_LOCK[i] = new Object[i];
-            ID_WRITER_LOCK[i] = new Object[i];
             URI_WRITER_LOCK[i] = new Object[i];
         }
         while (readFile.hasNextLine()) {
             try {
-                URI url = new URI(readFile.nextLine());
+                MyURI url = new MyURI(new URI(readFile.nextLine()), 1);
                 addToInternalHashMap(url);
             } catch (URISyntaxException e) {
                 //ignore invalid urls
@@ -86,15 +86,15 @@ public class Crawler {
      * if the url is duplicated, just ignore. It also indexes the urls by calculating
      * its hashCode
      */
-    private static void addToInternalHashMap(URI url) {
+    private static void addToInternalHashMap(MyURI url) {
         int hashValue = hash(url);
-        HashSet<URI> hashSet = null;
+        HashSet<MyURI> hashSet = null;
         synchronized (INTERNAL_HASHSET_LOCK[hashValue]) {
             if (internalHashMap.containsKey(hashValue)) {
                 hashSet = internalHashMap.get(hashValue);
             }
             else {
-                hashSet = new HashSet<URI>();
+                hashSet = new HashSet<MyURI>();
                 internalHashMap.put(hashValue, hashSet);
             }
             hashSet.add(url);
@@ -104,8 +104,8 @@ public class Crawler {
     /**
      * This method calculates the hashCode of a url
      */
-    private static int hash(URI url) {
-        return Math.abs(url.toString().hashCode()) % EXTERNAL_HASHSET_COUNT;
+    private static int hash(MyURI url) {
+        return Math.abs(url.getURI().toString().hashCode()) % EXTERNAL_HASHSET_COUNT;
     }
 
     /**
@@ -147,6 +147,7 @@ public class Crawler {
         // only randomly pick one index, instead of iterating over the whole hashmap,
         // so after this, urlQueue.isEmpty() may still be true, but more threads will come
         int index = (int)(Math.random() * EXTERNAL_HASHSET_COUNT);
+        // only save URI to disk, removing depth and avoiding serializable
         synchronized (INTERNAL_HASHSET_LOCK[index]) {
             if (!urlQueue.isEmpty()) {
                 return;
@@ -158,7 +159,7 @@ public class Crawler {
             // index corresponds to the id of the external hashset
             String externalName = "External" + index + ".ser";
             File file = new File(dirPath + externalName);
-            HashSet<URI> internalHashSet = internalHashMap.get(index);
+            HashSet<MyURI> internalHashSet = internalHashMap.get(index);
             HashSet<URI> externalHashSet = null;
             if (file.exists()) {
                 // load external hashset
@@ -181,9 +182,9 @@ public class Crawler {
             }
             // iterate through the internal hashset, if the url is duplicated, just ignore,
             // if the url is new, add it to both the queue and external hashset
-            for (URI url: internalHashSet) {
+            for (MyURI url: internalHashSet) {
                 if (!externalHashSet.contains(url)) {
-                    externalHashSet.add(url);
+                    externalHashSet.add(url.getURI());
                     urlQueue.add(url);
                 }
             }
@@ -215,7 +216,14 @@ public class Crawler {
         }
 
         public void run() {
-            URI url = null;
+            // create a separate directory for each thread
+            String dirPath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
+            dirPath = dirPath + jobID + "_" + threadID + File.separator;
+            File dir = new File(dirPath);
+            if (!dir.exists()) {
+                dir.mkdir();
+            }
+            MyURI url = null;
             while (pageCount < searchLimit) {
                 while (pageCount < searchLimit && (url = urlQueue.poll()) != null) {
                     if (!isRobotSafe(url)) {
@@ -239,36 +247,52 @@ public class Crawler {
                         output("process page " + fileName + " not successfully");
                         continue;
                     }
-                    List<URI> newUrls = null;
-                    if (pageFile != null) {
-                        newUrls = rmInvalidUrls(url, pageFile.getSubURLs());
-                    }
-                    else {
+                    if (pageFile == null) {
                         // to be safe, stop here when pageFile == null
                         output("process page " + fileName + " not successfully");
                         continue;
                     }
+                    // filter out empty content
+                    if (pageFile.getContent().matches("^\\s*$")) {
+                        continue;
+                    }
+                    // examine the sub urls
+                    List<MyURI> newUrls = rmInvalidUrls(url, pageFile.getSubURLs());
+                    newUrls = rmSameDomain(newUrls);
                     // save page to disk
                     try {
-                        savePage(fileName, url, newUrls, pageFile.getTitle(), pageFile.getContent());
+                        savePage(fileName, url, newUrls, pageFile.getWordsCount(), pageFile.getTitle(),
+                                pageFile.getContent(), threadID);
                     } catch (IOException e) {
                         output("save page " + fileName + " not successfully");
                         continue;
                     }
                     downloadCount++;
-                    output("thread " + threadID + " downloaded page " + fileName);
+                    //output("thread " + threadID + " downloaded page " + fileName + " with depth " + url.getDepth());
                     try {
-                        writeToMapping(fileName, url, threadID);
+                        writeToMapping(fileName, url);
                     } catch (IOException e) {
                         output("save mapping for " + fileName + " not successfully");
                         continue;
                     }
-                    // add new suburls to queue, if newUrl is duplicated in the internal hashmap,
+                    // only when depth does not exceed maximum, add new suburls to queue,
+                    // if newUrl is duplicated in the internal hashmap,
                     // it will be ignored by addToInternalHashMap(newUrl), and the urls in
                     // internal hashmap will also be checked against external hashset before
                     // being added to queue
-                    for (URI newUrl: newUrls) {
-                        addToInternalHashMap(newUrl);
+                    if (url.getDepth() < MAX_DEPTH) {
+                        for (MyURI newUrl: newUrls) {
+                            addToInternalHashMap(newUrl);
+                        }
+                    }
+                    else if (newUrls.size() != 0 && nextRoots.size() < 50) {
+                        // if depth >= MAX_DEPTH, randomly select 50 urls as the roots of potential
+                        // future crawling
+                        synchronized (NEXT_ROOTS_LOCK) {
+                            if (nextRoots.size() < 50) {
+                                nextRoots.add(newUrls.get(0));
+                            }
+                        }
                     }
                     if (System.currentTimeMillis() - startTime > duration) {
                         try {
@@ -280,6 +304,13 @@ public class Crawler {
                 }
                 // if the current queue is empty, initiate addToUrlQueue() method
                 addToUrlQueue();
+                if (System.currentTimeMillis() - startTime > duration) {
+                    try {
+                        stop();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
             }
         }
 
@@ -291,7 +322,8 @@ public class Crawler {
     /**
      * This method returns whether the page is robot safe
      */
-    private static boolean isRobotSafe(URI url) {
+    private static boolean isRobotSafe(MyURI myUrl) {
+        URI url = myUrl.getURI();
         String strHost = url.getHost();
         if (strHost == null) {
             return false;
@@ -363,7 +395,8 @@ public class Crawler {
      * (3) filter out images etc.
      * (4) ...
      */
-    private static String getPage(URI url) {
+    private static String getPage(MyURI myUrl) {
+        URI url = myUrl.getURI();
         try {
             // try opening the URI
             URLConnection urlConnection = url.toURL().openConnection();
@@ -426,8 +459,10 @@ public class Crawler {
     /*
      * This method removes invalid sub urls and assembles valid sub urls (by Chen Chen)
      */
-    private static List<URI> rmInvalidUrls(URI url, List<String> subURLs) {
-        List<URI> results = new ArrayList<URI>();
+    private static List<MyURI> rmInvalidUrls(MyURI myUrl, List<String> subURLs) {
+        URI url = myUrl.getURI();
+        int depth = myUrl.getDepth();
+        List<MyURI> results = new ArrayList<MyURI>();
         for (String suburl : subURLs) {
             URL newUrl = null;
             try {
@@ -437,7 +472,7 @@ public class Crawler {
                 continue;
             }
             try {
-                results.add(new URI(newUrl.toString()));
+                results.add(new MyURI(new URI(newUrl.toString()), depth + 1));
             } catch (URISyntaxException e) {
                 //ignore invalid urls
                 continue;
@@ -447,21 +482,48 @@ public class Crawler {
     }
 
     /**
+     * This method discards some of the urls with very frequent domains
+     */
+    private static List<MyURI> rmSameDomain(List<MyURI> urlList) {
+        List<MyURI> newUrlList = new ArrayList<MyURI>();
+        final int MAX_TOLERANCE = 10;
+        HashMap<String, Integer> repeat = new HashMap<String, Integer>();
+        for (int i = 0; i < urlList.size(); i++) {
+            String domain = urlList.get(i).getURI().getHost();
+            if (repeat.containsKey(domain)) {
+                int count = repeat.get(domain);
+                if (count < MAX_TOLERANCE) {
+                    repeat.put(domain, count + 1);
+                    newUrlList.add(urlList.get(i));
+                }
+            }
+            else {
+                repeat.put(domain, 1);
+                newUrlList.add(urlList.get(i));
+            }
+        }
+        return newUrlList;
+    }
+
+    /**
      * This method saves page to disk (by Chen Chen)
      */
-    private static void savePage(String fileName, URI thisUrl, List<URI> newUrls, String title,
-                                 String content)
+    private static void savePage(String fileName, MyURI thisUrl, List<MyURI> newUrls, int length,
+                                 String title, String content, int threadID)
             throws IOException {
         String filePath = savePath + "pages" + File.separator + "result_" + jobID + File.separator;
-        FileWriter writer = new FileWriter(filePath + fileName);
+        filePath = filePath + jobID + "_" + threadID + File.separator;
+        FileWriter writer = new FileWriter(filePath + fileName + ".page");
         BufferedWriter bufferedWriter = new BufferedWriter(writer);
         // write its own url
-        bufferedWriter.write("#ThisURL#" + "\n" + thisUrl.toString() + "\n");
+        bufferedWriter.write("#ThisURL#" + "\n" + thisUrl.getURI().toString() + "\n");
         // write its suburls
         bufferedWriter.write("#SubURL#" + "\n");
-        for (URI url: newUrls) {
-            bufferedWriter.write(url.toString() + "\n");
+        for (MyURI url: newUrls) {
+            bufferedWriter.write(url.getURI().toString() + "\n");
         }
+        // write its length
+        bufferedWriter.write("#Length#" + "\n" + length + "\n");
         // write its title
         bufferedWriter.write("#Title#" + "\n" + title + "\n");
         // write its content
@@ -472,17 +534,12 @@ public class Crawler {
     /**
      * This method saves the pageID - url pair to disk
      */
-    private static void writeToMapping(String id, URI url, int threadID)
+    private static void writeToMapping(String id, MyURI url)
             throws IOException {
-        // id to url
-        int index = threadID % EXTERNAL_HASHSET_COUNT;
-        synchronized (ID_WRITER_LOCK[index]) {
-            idWriter[index].write(id + "\n" + url.toString() + "\n");
-        }
         // url to id
-        index = hash(url);
+        int index = hash(url);
         synchronized (URI_WRITER_LOCK[index]) {
-            urlWriter[index].write(url.toString() + "\n" + id + "\n");
+            urlWriter[index].write(url.getURI().toString() + "\n" + id + "\n");
         }
     }
 
@@ -493,13 +550,13 @@ public class Crawler {
         // it consists of many small queues
         final int LIST_COUNT = 1000;
         int emptyPos = 0;
-        HashMap<Integer, LinkedList<URI>> listMap =
-                new HashMap<Integer, LinkedList<URI>>();
+        HashMap<Integer, LinkedList<MyURI>> listMap =
+                new HashMap<Integer, LinkedList<MyURI>>();
         private final Object[] LIST_LOCK = new Object[LIST_COUNT];
 
         public UrlQueue() {
             for (int i = 0; i < LIST_COUNT; i++) {
-                listMap.put(i, new LinkedList<URI>());
+                listMap.put(i, new LinkedList<MyURI>());
                 LIST_LOCK[i] = new Object();
             }
         }
@@ -510,23 +567,23 @@ public class Crawler {
 
         // there's no lock for emptyPos, so cannot guarantee emptyPos won't change,
         // but doesn't hurt, and when hit miss is rare, should work well
-        public void add(URI url) {
+        public void add(MyURI url) {
             int index = emptyPos;
             if (index == -1) {
                 index = (int)(Math.random() * LIST_COUNT);
             }
             synchronized (LIST_LOCK[index]) {
-                LinkedList<URI> current = listMap.get(index);
+                LinkedList<MyURI> current = listMap.get(index);
                 current.add(url);
             }
             emptyPos = -1;
         }
 
-        public URI poll() {
+        public MyURI poll() {
             int index = (int)(Math.random() * LIST_COUNT);
-            URI url = null;
+            MyURI url = null;
             synchronized (LIST_LOCK[index]) {
-                LinkedList<URI> current = listMap.get(index);
+                LinkedList<MyURI> current = listMap.get(index);
                 url = current.poll();
             }
             // if a thread does not get a url from a small queue,
@@ -539,6 +596,14 @@ public class Crawler {
                 emptyPos = -1;
             }
             return url;
+        }
+
+        public int size() {
+            int index = (int)(Math.random() * LIST_COUNT);
+            synchronized (LIST_LOCK[index]) {
+                LinkedList<MyURI> current = listMap.get(index);
+                return current.size();
+            }
         }
     }
 
@@ -557,13 +622,24 @@ public class Crawler {
     }
 
     /**
-     * This method closes all writers and exits the program
+     * This method saves future roots, closes all writers and exits the program
      */
-    private static void stop() throws IOException {
+    private synchronized static void stop()
+            throws IOException {
+        String dirPath = savePath + "roots" + File.separator;
+        String fileName = "root_" + (jobID + 1000);
+        BufferedWriter nextWriter = null;
+        try {
+            FileWriter writer = new FileWriter(dirPath + fileName);
+            nextWriter = new BufferedWriter(writer);
+        } catch (IOException e) {
+            System.out.println("Create " + fileName + " not successfully");
+        }
+        for (MyURI myUrl: nextRoots) {
+            nextWriter.write(myUrl.getURI().toString() + "\n");
+        }
+        nextWriter.close();
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
-            synchronized (ID_WRITER_LOCK[i]) {
-                idWriter[i].close();
-            }
             synchronized (URI_WRITER_LOCK[i]) {
                 urlWriter[i].close();
             }
@@ -573,6 +649,27 @@ public class Crawler {
             logWriter.close();
         }
         System.exit(0);
+    }
+
+    /**
+     * This class adds depth value to URI class
+     */
+    private static class MyURI {
+        private URI url;
+        private int depth;
+
+        public MyURI(URI url, int depth) {
+            this.url = url;
+            this.depth = depth;
+        }
+
+        public URI getURI() {
+            return url;
+        }
+
+        public int getDepth() {
+            return depth;
+        }
     }
 
     /**
@@ -616,7 +713,7 @@ public class Crawler {
             }
             else if (args[index].equals("-time")) {
                 try {
-                    duration = Long.parseLong(args[index + 1]) * 1000;
+                    duration = Long.parseLong(args[index + 1]) * 60 * 1000;
                     index += 2;
                 } catch (NumberFormatException e) {
                     System.out.println("Please provide an integer value for duration");
@@ -670,18 +767,6 @@ public class Crawler {
         if (!mappingDir.exists()) {
             mappingDir.mkdir();
         }
-        String insidePath = mappingPath + "idToUrl" + File.separator;
-        File insideDir = new File(insidePath);
-        // only useful when it's the first time
-        if (!insideDir.exists()) {
-            insideDir.mkdir();
-        }
-        insidePath = mappingPath + "urlToId" + File.separator;
-        insideDir = new File(insidePath);
-        // only useful when it's the first time
-        if (!insideDir.exists()) {
-            insideDir.mkdir();
-        }
         // create a work_log directory (if haven't) and create the work_log file
         String dirPath = savePath + "work_log" + File.separator;
         File dir = new File(dirPath);
@@ -691,26 +776,19 @@ public class Crawler {
         }
         // initialize log writer
         try {
-            FileWriter writer = new FileWriter(dirPath + "workLog_" + jobID);
+            FileWriter writer = new FileWriter(dirPath + "workLog_" + jobID + ".log");
             logWriter = new BufferedWriter(writer);
         } catch (IOException e) {
             System.out.println("Create workLog_" + jobID + " not successfully");
         }
-        // initialize id and url writer
+        // initialize url writer
         for (int i = 0; i < EXTERNAL_HASHSET_COUNT; i++) {
-            String fileName = savePath + "pageID" + File.separator + "idToUrl" + File.separator + "idToUrl_" + i;
-            try {
-                FileWriter writer = new FileWriter(fileName, true);
-                idWriter[i] = new BufferedWriter(writer);
-            } catch (IOException e) {
-                System.out.println("Create idToUrl_" + i + " not successfully");
-            }
-            fileName = savePath + "pageID" + File.separator + "urlToId" + File.separator + "urlToId_" + i;
+            String fileName = savePath + "pageID" + File.separator + "urlToId_" + i + ".mapping";
             try {
                 FileWriter writer = new FileWriter(fileName, true);
                 urlWriter[i] = new BufferedWriter(writer);
             } catch (IOException e) {
-                System.out.println("Create urlToId_" + i + " not successfully");
+                System.out.println("Read urlToId_" + i + " not successfully");
             }
         }
         return readFile;
