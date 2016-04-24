@@ -14,6 +14,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
 
+/**
+ * Compress page so that it only has title, body and sub-urls.
+ */
 public class PageCompress {
     private String pageID;  // file name
     private String pageHTML;    // page content (tag+text)
