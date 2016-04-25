@@ -1,0 +1,17 @@
+{
+  "name": "wse-frontend",
+  "version": "1.0.0",
+  "description": "frontend",
+  "main": "app.js",
+  "dependencies": {
+    "angular": "^1.2.0",
+    "bootstrap": "^3.3.6",
+    "express": "^3.2.0",
+    "fontawesome": "^4.5.0",
+    "jquery": "^2.2.3",
+    "log4js": "^0.6.35",
+    "request": "^2.72.0"
+  },
+  "author": "Bin Li",
+  "license": "ISC"
+}

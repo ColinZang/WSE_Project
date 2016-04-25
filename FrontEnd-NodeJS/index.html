@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Gang Search</title>
+    <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="lib/css/index.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.20/angular.min.js" type="text/javascript"></script>
+    <script src="lib/js/controllers.js" type="text/javascript"></script>
+</head>
+<body ng-app="myApp" ng-controller="appCtrl">
+    <div class="search">
+        <div class="h1" ng-hide="haveResults" style="margin:100px 150px 50px 150px">
+            <h1 class="title">Gang Search</h1>
+        </div>
+        <div>
+            <div class="input-group group-margin" style="margin: 50px 200px 20px 200px">
+                <input type="text" class="form-control" ng-keypress="onKeyPress($event)" ng-model="queryWord" placeholder="How can I help you?">
+                    <span class="input-group-btn">
+                        <button class="btn btn-danger" type="button" ng-click="go(true, 1, true)" ng-disabled="queryWord.length<1">
+                            <span class=" glyphicon glyphicon-search"></span>
+                        </button>
+                    </span>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 20px; margin-bottom: 20px">
+            <form>
+		<!--ADD SOME BUTTON LIKE GOOGLE'S "I'm feeling lucky here" -->
+            </form>
+        </div>
+    </div>
+    <div class="results" ng-show="haveResults">
+        <div ng-show="haveSpellcheck">
+            <!-- check-section is in index.css-->
+
+            <section class="col-xs-12 col-sm-6 col-md-12 check-section">
+                <h3>Did you mean <a class="page-cursor" ng-click="correctSpell()">{{spellcheck}}</a> ?</h3>
+            </section>
+        </div>
+
+	<!-- SHOW RESULTS AFTER THE REQUEST, SUCH AS URL, ABSTRACT -->
+    </div>
+</body>
+</html>
