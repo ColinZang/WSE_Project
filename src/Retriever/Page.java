@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Created by Wenzhao on 4/22/16.
@@ -21,15 +23,18 @@ public class Page {
     private String preview = " ";
     private int previewTokenSize = 0;
     private String scoreInfo = "";
-    private boolean exist = false;
+    private boolean valid = false;
     private String pagePath;
     private int match = -1;
     private boolean titleContains = false;
+    private boolean seen = false;
+    private List<Sequence> currentSeq =
+            new ArrayList<Sequence>();
 
-    public Page(String id, double pageRank, String pagePath) {
+    public Page(String id, double pageRank, String path) {
         this.id = id;
         this.pageRank = pageRank;
-        this.pagePath = pagePath;
+        pagePath = path;
     }
 
     @Override
@@ -71,52 +76,71 @@ public class Page {
         return titleContains;
     }
 
-    public void calculateScore(String token, double wordWeight) {
-        String[] parts = token.split("\\s+");
-        int size = parts.length;
-        int titleCount = getCount(token.toLowerCase(), title.toLowerCase());
-        if (titleCount != 0) {
-            setMatch(size);
-            setTitleContains(true);
+    public void calculateScore() {
+        for (Sequence seq: currentSeq) {
+            double wordWeight = Retriever.getWeight(seq);
+            String token = seq.getToken();
+            String[] parts = token.split("\\s+");
+            int size = parts.length;
+            int titleCount = getCount(token.toLowerCase(), title.toLowerCase());
+            if (titleCount != 0) {
+                setMatch(size);
+                setTitleContains(true);
+            }
+            int lowerCount = getCount(token.toLowerCase(), lowerContent);
+            if (lowerCount == 0) {
+//            scoreInfo += "Token: " + token + " Original=0 Lower=0 WordWeight=" + wordWeight + " wordTotal=0\n";
+                return;
+            }
+            int originalCount = 0;
+            if (!token.equals(token.toLowerCase())) {
+                originalCount = getCount(token, content);
+            }
+            lowerCount = lowerCount - originalCount;
+            if (lowerCount != 0 || originalCount != 0) {
+                setMatch(size);
+            }
+            double originalScore = formula(wordWeight, originalCount);
+            double lowerScore = formula(wordWeight, lowerCount);
+            final double weight = 1.5;
+            double addedScore = weight * originalScore + lowerScore;
+//        scoreInfo += "Token: " + token + " Original=" + originalScore + " Lower=" + lowerScore +
+//                 " WordWeight=" + wordWeight + " wordTotal=" + addedScore + "\n";
+            dependencyScore += addedScore;
         }
-        int lowerCount = getCount(token.toLowerCase(), lowerContent);
-        if (lowerCount == 0) {
-            scoreInfo += "Token: " + token + " Original=0 Lower=0 WordWeight=" + wordWeight + " wordTotal=0\n";
-            return;
-        }
-        int originalCount = getCount(token, content);
-        lowerCount = lowerCount - originalCount;
-        if (lowerCount != 0 || originalCount != 0) {
-            setMatch(size);
-        }
-        double originalScore = formula(wordWeight, originalCount);
-        double lowerScore = formula(wordWeight, lowerCount);
-        final double weight = 1.5;
-        double addedScore = weight * originalScore + lowerScore;
-        scoreInfo += "Token: " + token + " Original=" + originalScore + " Lower=" + lowerScore +
-                 " WordWeight=" + wordWeight + " wordTotal=" + addedScore + "\n";
-        dependencyScore += addedScore;
+        currentSeq.clear();
     }
 
     public double finalScore() {
-        final double weight = 0;
-        totalScore = dependencyScore + weight * pageRank;
-        return totalScore;
+//        final double weight = 0;
+//        totalScore = dependencyScore + weight * pageRank;
+//        return totalScore;
+        return dependencyScore;
     }
 
     public boolean isValid() {
-        return exist;
+        return valid;
+    }
+
+    public void setValid(boolean valid) {
+        this.valid = valid;
+    }
+
+    public boolean isSeen() {
+        return seen;
+    }
+
+    public void setSeq(Sequence seq) {
+        currentSeq.add(seq);
     }
 
     public void parsePage() {
+        seen = true;
         int first = id.indexOf('_', 0);
         int second = id.indexOf('_', first + 1);
         String firstDir = "result_" + id.substring(0, first);
         String secondDir = id.substring(0, second);
         String fileName = id + ".page";
-        if (!pagePath.endsWith(File.separator)) {
-            pagePath += File.separator;
-        }
         String wholePath = pagePath + firstDir + File.separator + secondDir
                 + File.separator + fileName;
         try {
@@ -126,9 +150,9 @@ public class Page {
                 if (line.equals("#ThisURL#")) {
                     url = reader.readLine();
                 }
-                else if (line.equals("#Length#")) {
-                    length = Integer.parseInt(reader.readLine());
-                }
+//                else if (line.equals("#Length#")) {
+//                    length = Integer.parseInt(reader.readLine());
+//                }
                 else if (line.equals("#Title#")) {
                     title = reader.readLine();
                 }
@@ -142,27 +166,26 @@ public class Page {
             if (content == null) {
                 return;
             }
-            exist = true;
+            valid = true;
         } catch (IOException e) {
-            System.out.println("Parse page " + id + " not successful");
+//            System.out.println("Parse page " + id + " not successful");
         }
     }
 
     private int getCount(String token, String content) {
         int index = 0;
         int count = 0;
-        String[] parts = token.split("\\s+");
-        int size = parts.length;
+//        String[] parts = token.split("\\s+");
+//        int size = parts.length;
         boolean hasPreview = false;
         while ((index = content.indexOf(token, index)) != -1) {
-            if (size >= previewTokenSize && !hasPreview) {
+            if (!hasPreview) {
                 int end = Math.min(content.length(), index + 200);
                 while (end < content.length() && content.charAt(end) != ' ') {
                     end++;
                 }
                 preview = content.substring(index, end);
                 hasPreview = true;
-                previewTokenSize = size;
             }
             count++;
             index += token.length();
