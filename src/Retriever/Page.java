@@ -15,7 +15,7 @@ public class Page {
     private String lowerContent = null;
     private String url;
     private String title;
-    private double dependencyScore;
+    private double dependencyScore = 0;
     private double totalScore;
     private int length;
     private String preview = " ";
@@ -24,6 +24,7 @@ public class Page {
     private boolean exist = false;
     private String pagePath;
     private int match = -1;
+    private boolean titleContains = false;
 
     public Page(String id, double pageRank, String pagePath) {
         this.id = id;
@@ -66,7 +67,18 @@ public class Page {
                 " total=" + totalScore + "\n";
     }
 
+    public boolean titleContains() {
+        return titleContains;
+    }
+
     public void calculateScore(String token, double wordWeight) {
+        String[] parts = token.split("\\s+");
+        int size = parts.length;
+        int titleCount = getCount(token.toLowerCase(), title.toLowerCase());
+        if (titleCount != 0) {
+            setMatch(size);
+            setTitleContains(true);
+        }
         int lowerCount = getCount(token.toLowerCase(), lowerContent);
         if (lowerCount == 0) {
             scoreInfo += "Token: " + token + " Original=0 Lower=0 WordWeight=" + wordWeight + " wordTotal=0\n";
@@ -75,8 +87,6 @@ public class Page {
         int originalCount = getCount(token, content);
         lowerCount = lowerCount - originalCount;
         if (lowerCount != 0 || originalCount != 0) {
-            String[] parts = token.split("\\s+");
-            int size = parts.length;
             setMatch(size);
         }
         double originalScore = formula(wordWeight, originalCount);
@@ -162,6 +172,10 @@ public class Page {
 
     private void setMatch(int match) {
         this.match = match;
+    }
+
+    private void setTitleContains(boolean titleContains) {
+        this.titleContains = titleContains;
     }
 
     private double formula(double wordWeight, int count) {

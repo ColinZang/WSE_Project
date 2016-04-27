@@ -142,7 +142,7 @@ public class Retriever {
         HashSet<Sequence> seenSeqs = new HashSet<Sequence>();
         HashSet<URI> seenUrls = new HashSet<URI>();
         HashSet<String> seenTitles = new HashSet<String>();
-//        final int customMax = 5000;
+        final int customMax = 10000;
         // should have grouped the same length seq together
         for (int i = seqList.size() - 1; i >= 0; i--) {
 //            System.out.println(i + " round");
@@ -201,10 +201,10 @@ public class Retriever {
                     results.add(page);
                     //System.out.println("Calculate score finished for page " + page.getID());
                 }
-//                if (results.size() >= customMax) {
-//                    return;
-//                }
-                if (System.currentTimeMillis() - startTime > 5000) {
+                if (results.size() >= customMax) {
+                    return;
+                }
+                if (System.currentTimeMillis() - startTime > 3000) {
                     return;
                 }
             }
@@ -310,6 +310,12 @@ public class Retriever {
                 return -1;
             }
             else if (one.getMatch() < two.getMatch()) {
+                return 1;
+            }
+            else if (one.titleContains() && !two.titleContains()) {
+                return -1;
+            }
+            else if (!one.titleContains() && two.titleContains()) {
                 return 1;
             }
             else if (oneScore > twoScore) {
