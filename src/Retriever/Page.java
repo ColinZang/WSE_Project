@@ -11,8 +11,8 @@ import java.io.IOException;
 public class Page {
     private String id;
     private double pageRank;
-    private String content;
-    private String lowerContent;
+    private String content = null;
+    private String lowerContent = null;
     private String url;
     private String title;
     private double dependencyScore;
@@ -21,11 +21,14 @@ public class Page {
     private String preview = " ";
     private int previewTokenSize = 0;
     private String scoreInfo = "";
+    private boolean exist = false;
+    private String pagePath;
+    private int match = -1;
 
     public Page(String id, double pageRank, String pagePath) {
         this.id = id;
         this.pageRank = pageRank;
-        parsePage(pagePath);
+        this.pagePath = pagePath;
     }
 
     @Override
@@ -46,6 +49,18 @@ public class Page {
         return url;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public double getPageRank() {
+        return pageRank;
+    }
+
+    public int getMatch() {
+        return match;
+    }
+
     public String getScoreInfo() {
         return scoreInfo + "Dependency Score=" + dependencyScore + " pageRank=" + pageRank +
                 " total=" + totalScore + "\n";
@@ -59,6 +74,11 @@ public class Page {
         }
         int originalCount = getCount(token, content);
         lowerCount = lowerCount - originalCount;
+        if (lowerCount != 0 || originalCount != 0) {
+            String[] parts = token.split("\\s+");
+            int size = parts.length;
+            setMatch(size);
+        }
         double originalScore = formula(wordWeight, originalCount);
         double lowerScore = formula(wordWeight, lowerCount);
         final double weight = 1.5;
@@ -69,12 +89,16 @@ public class Page {
     }
 
     public double finalScore() {
-        final double weight = 1.5E7;
+        final double weight = 0;
         totalScore = dependencyScore + weight * pageRank;
         return totalScore;
     }
 
-    private void parsePage(String pagePath) {
+    public boolean isValid() {
+        return exist;
+    }
+
+    public void parsePage() {
         int first = id.indexOf('_', 0);
         int second = id.indexOf('_', first + 1);
         String firstDir = "result_" + id.substring(0, first);
@@ -95,7 +119,7 @@ public class Page {
                 else if (line.equals("#Length#")) {
                     length = Integer.parseInt(reader.readLine());
                 }
-                else if (line.equals("Title")) {
+                else if (line.equals("#Title#")) {
                     title = reader.readLine();
                 }
                 else if (line.equals("#Content#")) {
@@ -105,6 +129,10 @@ public class Page {
                 }
             }
             reader.close();
+            if (content == null) {
+                return;
+            }
+            exist = true;
         } catch (IOException e) {
             System.out.println("Parse page " + id + " not successful");
         }
@@ -118,7 +146,11 @@ public class Page {
         boolean hasPreview = false;
         while ((index = content.indexOf(token, index)) != -1) {
             if (size >= previewTokenSize && !hasPreview) {
-                preview = content.substring(index, Math.min(content.length(), index + 100));
+                int end = Math.min(content.length(), index + 200);
+                while (end < content.length() && content.charAt(end) != ' ') {
+                    end++;
+                }
+                preview = content.substring(index, end);
                 hasPreview = true;
                 previewTokenSize = size;
             }
@@ -126,6 +158,10 @@ public class Page {
             index += token.length();
         }
         return count;
+    }
+
+    private void setMatch(int match) {
+        this.match = match;
     }
 
     private double formula(double wordWeight, int count) {

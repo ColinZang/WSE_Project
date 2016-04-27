@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.HashSet;
 
 /**
  * Created by Wenzhao on 4/15/16.
@@ -25,6 +26,7 @@ public class PageRank {
             new HashMap<Integer, HashMap<String, Page>>();
     private static List<Page> pageList = new ArrayList<Page>();
     private final static int HASH_MOD = 1000;
+    private static HashSet<String> set = new HashSet<String>();
 
     private static void run(String mapPath, String filePath, String savePath, double f) {
         try {
@@ -46,6 +48,7 @@ public class PageRank {
             System.out.println("Write results unsuccessful");
             System.exit(1);
         }
+        System.out.println("finished");
     }
 
     private static void loadMap(String mapPath)
@@ -78,6 +81,13 @@ public class PageRank {
         File[] jobDirs = dir.listFiles();
         int count = 0;
         for (File job: jobDirs) {
+//            String dirName = job.getName();
+//            int pos = dirName.indexOf('_');
+//            int jobID = Integer.parseInt(dirName.substring(pos + 1, dirName.length()));
+//            if (jobID > 100) {
+//                continue;
+//            }
+            System.out.println(job.getName());
             File[] threadDirs = job.listFiles();
             if (threadDirs == null) {
                 continue;
@@ -116,23 +126,29 @@ public class PageRank {
                     }
                     processPage(id, thisUrl, subUrls, length);
                     count++;
-                    //System.out.println("processed " + count + " pages");
+                    if (count % 10000 == 0) {
+                        System.out.println("processed " + count + " pages");
+                    }
                     readFile.close();
                 }
             }
         }
+        System.out.println(pageList.size());
     }
 
     private static double[] calculate(double f) {
         double[] base = calculateBase(f);
         calculateParentWeight(f);
         int n = pageList.size();
+        System.out.println("n=" + n + " waiting for array");
         double[] result = new double[n];
+        System.out.println("allocate successful");
         System.arraycopy(base, 0, result, 0, n);
         int round = 1;
         while (true) {
             System.out.println("calculating round " + round);
             double[] newResult = new double[n];
+            System.out.println("allocate successful");
             System.arraycopy(base, 0, newResult, 0, n);
             for (int i = 0; i < n; i++) {
                 double sum = 0;
@@ -201,6 +217,16 @@ public class PageRank {
                 return null;
             }
         }
+//        int first = id.indexOf('_', 0);
+//        int jobID = Integer.parseInt(id.substring(0, first));
+//        int second = id.indexOf('_', first + 1);
+//        String dirName = id.substring(0, second);
+//        String filePath = dirPath + "result_" + jobID + File.separator + dirName +
+//                File.separator + id + ".page";
+//        File file = new File(filePath);
+//        if (!file.exists()) {
+//            return null;
+//        }
         int pos = hashId(id);
         HashMap<String, Page> current = idToPage.get(pos);
         if (current == null) {
@@ -210,6 +236,12 @@ public class PageRank {
         Page page = current.get(id);
         if (page == null) {
             page = new Page(id, pageList.size());
+            if (set.contains(id)) {
+                System.out.println("duplicate" + id);
+            }
+            else {
+                set.add(id);
+            }
             pageList.add(page);
             current.put(id, page);
             if (needFix) {

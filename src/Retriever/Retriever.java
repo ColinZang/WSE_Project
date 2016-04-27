@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.File;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,9 +15,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Comparator;
 import java.util.Collections;
+import java.net.URI;
 
 /**
  * Created by Wenzhao on 4/21/16.
@@ -37,14 +38,11 @@ public class Retriever {
             new HashMap<String, Page>();
     private static HashMap<Sequence, HashSet<Page>> pages =
             new HashMap<Sequence, HashSet<Page>>();
+    private static List<Page> results = new ArrayList<Page>();
 
     private static void run(String query, String stopFile) {
         HashSet<String> stopList = loadStop(stopFile);
         parseQuery(query, stopList);
-        for (Sequence seq: seqList) {
-            System.out.println(seq.getLeft() + " " + seq.getRight() + " " + seq.getToken());
-        }
-        System.exit(1);
         getPages();
         calculate();
         returnResults();
@@ -56,9 +54,6 @@ public class Retriever {
         List<String> tokens = parser.GetResTokens();
         List<String> types = parser.GetTokensType();
         int lastPartition = -1;
-        for (int i = 0; i < tokens.size(); i++) {
-            System.out.println(tokens.get(i) + " " + types.get(i));
-        }
         for (int i = 0; i < tokens.size(); i++) {
             String type = types.get(i);
             if (type.equals("WORD")) {
@@ -85,7 +80,7 @@ public class Retriever {
             seqList.add(seq);
         }
         if (queryWords.size() == 0) {
-            System.out.println("Query contains non-English words, invalid words or are all stop words");
+            System.out.println("Query may be too general, please try something else");
             System.exit(1);
         }
         Collections.sort(seqList, new SeqComp());
@@ -106,12 +101,16 @@ public class Retriever {
     }
 
     private static void getPages() {
-        for (Sequence seq: seqList) {
+        for (int i = 0; i < seqList.size(); i++) {
+            Sequence seq = seqList.get(i);
             if (pages.containsKey(seq)) {
                 continue;
             }
             if (seq.getRight() == seq.getLeft()) {
-                pages.put(seq, readIndex(seq));
+                HashSet<Page> result = readIndex(seq);
+                pages.put(seq, result);
+//                System.out.println("Read index for word " + seq.getToken() + " finished, with "
+//                        + result.size() + " pages");
             }
             else {
                 Sequence partOne = new Sequence(queryWords, seq.getLeft(), seq.getRight() - 1);
@@ -131,42 +130,101 @@ public class Retriever {
                     }
                 }
                 pages.put(seq, result);
+//                System.out.println("Read index for word " + seq.getToken() + " finished, with "
+//                        + result.size() + " pages");
             }
         }
     }
 
     private static void calculate() {
-        for (Map.Entry<Sequence, HashSet<Page>> entry: pages.entrySet()) {
-            Sequence seq = entry.getKey();
-            String token = seq.getToken();
-            double weight = getWeight(seq);
-            HashSet<Page> set = entry.getValue();
+//        System.out.println("Calculating...");
+        long startTime = System.currentTimeMillis();
+        HashSet<Sequence> seenSeqs = new HashSet<Sequence>();
+        HashSet<URI> seenUrls = new HashSet<URI>();
+        HashSet<String> seenTitles = new HashSet<String>();
+//        final int customMax = 5000;
+        // should have grouped the same length seq together
+        for (int i = seqList.size() - 1; i >= 0; i--) {
+//            System.out.println(i + " round");
+            Sequence seq = seqList.get(i);
+            if (seenSeqs.contains(seq)) {
+                continue;
+            }
+            else {
+                seenSeqs.add(seq);
+            }
+            HashSet<Page> set = pages.get(seq);
+            List<Page> current = new ArrayList<Page>();
             for (Page page: set) {
+                if (page.getMatch() != -1) {
+                    continue;
+                }
+                current.add(page);
+            }
+            Collections.sort(current, new PageRankComp());
+            for (Page page: current) {
+                if (!page.isValid()) {
+                    page.parsePage();
+                    if (!page.isValid()) {
+                        continue;
+                    }
+                    URI url = null;
+                    try {
+                        url = new URI(page.getUrl());
+                    } catch (URISyntaxException e) {
+//                        System.out.println("not a url: " + page.getUrl());
+                        continue;
+                    }
+                    if (seenUrls.contains(url)) {
+                        continue;
+                    }
+                    else {
+                        seenUrls.add(url);
+                    }
+                    if (seenTitles.contains(page.getTitle())) {
+                        continue;
+                    }
+                    else {
+                        seenTitles.add(page.getTitle());
+                    }
+                }
+                String token = seq.getToken();
+                double weight = getWeight(seq);
                 page.calculateScore(token, weight);
+//                for (int index = i; index >= 0; index--) {
+//                    Sequence currentSeq = seqList.get(index);
+//                    String token = currentSeq.getToken();
+//                    double weight = getWeight(currentSeq);
+//                    page.calculateScore(token, weight);
+//                }
+                if (page.getMatch() != -1) {
+                    results.add(page);
+                    //System.out.println("Calculate score finished for page " + page.getID());
+                }
+//                if (results.size() >= customMax) {
+//                    return;
+//                }
+                if (System.currentTimeMillis() - startTime > 5000) {
+                    return;
+                }
             }
         }
     }
 
     private static void returnResults() {
-        List<Page> result = new ArrayList<Page>();
-        for (Map.Entry<String, Page> entry: seenPages.entrySet()) {
-            Page page = entry.getValue();
-            result.add(page);
+        if (results.size() == 0) {
+            System.out.println("No relevant results are available, sorry");
+            return;
         }
-        Collections.sort(result, new PageComp());
+        Collections.sort(results, new PageComp());
         int count = 0;
-        HashSet<String> seen = new HashSet<String>();
-        while (count < max && count < result.size()) {
-            String url = result.get(count).getUrl();
-            if (seen.contains(url)) {
-                continue;
-            }
-            else {
-                seen.add(url);
-            }
-            System.out.println(result.get(count));
-            System.out.println(result.get(count).getScoreInfo());
+        for (Page page: results) {
+            System.out.println(page);
+            //System.out.println(page.getScoreInfo());
             count++;
+            if (count >= max) {
+                return;
+            }
         }
     }
 
@@ -185,12 +243,16 @@ public class Retriever {
         HashSet<Page> pageSet = new HashSet<Page>();
         String word = seq.getToken();
         word = StemEnglishWord(word.toLowerCase());
+//        System.out.println("stemmed is " + word);
         int count = 0;
         try {
             if (!indexPath.endsWith(File.separator)) {
                 indexPath += File.separator;
             }
-            File file = new File(indexPath + word + ".word");
+            final int MODULE = 500;
+            int wordHash = Math.abs(word.hashCode()) % MODULE;
+//            System.out.println("folder name is " + wordHash);
+            File file = new File(indexPath + wordHash + File.separator + word + ".word");
             BufferedReader reader = new BufferedReader(new FileReader(file));
             String line = null;
             while((line = reader.readLine()) != null) {
@@ -198,11 +260,13 @@ public class Retriever {
                 double pageRank = Double.parseDouble(reader.readLine());
                 if (seenPages.containsKey(pageID)) {
                     pageSet.add(seenPages.get(pageID));
+                    //System.out.println(pageID + " has been seen");
                 }
                 else {
                     Page page = new Page(pageID, pageRank, pagePath);
                     pageSet.add(page);
                     seenPages.put(pageID, page);
+                    //System.out.println(pageID + " has been added");
                 }
                 count++;
             }
@@ -210,7 +274,7 @@ public class Retriever {
             int index = seq.getLeft();
             wordWeights.put(index, calculateWeight(count));
         } catch (IOException e) {
-            System.out.println("Read index not successful for word " + seq.getToken());
+//            System.out.println("Read index not successful for word " + seq.getToken());
         }
         return pageSet;
     }
@@ -226,6 +290,12 @@ public class Retriever {
             else if (diff > 0) {
                 return 1;
             }
+            else if (one.getLeft() > two.getLeft()) {
+                return -1;
+            }
+            else if (one.getLeft() < two.getLeft()) {
+                return 1;
+            }
             else {
                 return 0;
             }
@@ -236,10 +306,32 @@ public class Retriever {
         public int compare(Page one, Page two) {
             double oneScore = one.finalScore();
             double twoScore = two.finalScore();
-            if (oneScore > twoScore) {
+            if (one.getMatch() > two.getMatch()) {
+                return -1;
+            }
+            else if (one.getMatch() < two.getMatch()) {
+                return 1;
+            }
+            else if (oneScore > twoScore) {
                 return -1;
             }
             else if (oneScore < twoScore) {
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+    }
+
+    private static class PageRankComp implements Comparator<Page> {
+        public int compare(Page one, Page two) {
+            double oneRank = one.getPageRank();
+            double twoRank = two.getPageRank();
+            if (oneRank > twoRank) {
+                return -1;
+            }
+            else if (oneRank < twoRank) {
                 return 1;
             }
             else {
@@ -273,40 +365,40 @@ public class Retriever {
             }
             reader.close();
         } catch (IOException e) {
-            System.out.println("Read in stop list not successful");
+//            System.out.println("Read in stop list not successful");
         }
         return stopList;
     }
 
     private static void checkArgs(String[] args) {
         if (args.length != 12) {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         if (args[0].equals("-query")) {
             final int MAX_QUERY_LENGTH = 256;
             String query = args[1];
             if (query.length() > MAX_QUERY_LENGTH) {
-                System.out.println("Query exceeded maximum length");
+                System.out.println("Query exceeded maximum length, please try something else");
                 System.exit(1);
             }
         }
         else {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         if (args[2].equals("-index")) {
             checkPath(args[3]);
         }
         else {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         if (args[4].equals("-page")) {
             checkPath(args[5]);
         }
         else {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         if (args[6].equals("-total")) {
@@ -314,16 +406,16 @@ public class Retriever {
             try {
                 number = Integer.parseInt(args[7]);
             } catch (RuntimeException e) {
-                System.out.println("Please provide a positive integer for total");
+//                System.out.println("Please provide a positive integer for total");
                 System.exit(1);
             }
             if (number <= 0) {
-                System.out.println("Please provide a positive integer for total");
+//                System.out.println("Please provide a positive integer for total");
                 System.exit(1);
             }
         }
         else {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         if (args[8].equals("-max")) {
@@ -331,37 +423,37 @@ public class Retriever {
             try {
                 number = Integer.parseInt(args[9]);
             } catch (RuntimeException e) {
-                System.out.println("Please provide a positive integer for max");
+//                System.out.println("Please provide a positive integer for max");
                 System.exit(1);
             }
             if (number <= 0) {
-                System.out.println("Please provide a positive integer for max");
+//                System.out.println("Please provide a positive integer for max");
                 System.exit(1);
             }
         }
         else {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         if (!args[10].equals("-stop")) {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
     }
 
     private static void checkPath(String docsPath) {
         if (docsPath == null) {
-            System.out.println(USAGE);
+//            System.out.println(USAGE);
             System.exit(1);
         }
         Path docDir = Paths.get(docsPath);
         if (!Files.isReadable(docDir)) {
-            System.out.println("Directory '" + docDir.toAbsolutePath() + "' does not "
-                    + "exist or is not readable, please check the path");
+//            System.out.println("Directory '" + docDir.toAbsolutePath() + "' does not "
+//                    + "exist or is not readable, please check the path");
             System.exit(1);
         }
         if (!Files.isDirectory(docDir)) {
-            System.out.println("Please provide the path of a directory");
+//            System.out.println("Please provide the path of a directory");
             System.exit(1);
         }
     }
