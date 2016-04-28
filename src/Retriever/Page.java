@@ -91,10 +91,7 @@ public class Page {
 //            scoreInfo += "Token: " + token + " Original=0 Lower=0 WordWeight=" + wordWeight + " wordTotal=0\n";
                 continue;
             }
-            int originalCount = 0;
-            if (!token.equals(token.toLowerCase())) {
-                originalCount = getCount(token, content);
-            }
+            int originalCount = getCount(token, content);
             lowerCount = lowerCount - originalCount;
             if (lowerCount != 0 || originalCount != 0) {
                 setMatch(size);
@@ -129,8 +126,12 @@ public class Page {
         return seen;
     }
 
-    public void setSeq(Sequence seq) {
+    public void addSeq(Sequence seq) {
         currentSeq.add(seq);
+    }
+
+    public boolean isSeqEmpty() {
+        return currentSeq.isEmpty();
     }
 
     public void parsePage() {

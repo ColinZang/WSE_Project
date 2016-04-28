@@ -126,7 +126,8 @@ public class Retriever {
             seqList.add(seq);
         }
         if (queryWords.size() == 0) {
-            warning = "Query may be too general, please try something else";
+            warning = "Query may be too general or contains unsupported characters, " +
+                    "please try something else";
             System.out.println(warning);
             return;
 //            System.exit(1);
@@ -214,8 +215,10 @@ public class Retriever {
                     if (page.isSeen() && !page.isValid()) {
                         continue;
                     }
-                    page.setSeq(seq);
-                    current.add(page);
+                    if (page.isSeqEmpty()) {
+                        current.add(page);
+                    }
+                    page.addSeq(seq);
                 }
             }
             if (current.size() == 0) {
@@ -437,7 +440,6 @@ public class Retriever {
     }
 
     private static void loadStop(String filePath) {
-        HashSet<String> stopList = new HashSet<String>();
         try {
             FileReader fileReader = new FileReader(filePath);
             BufferedReader reader = new BufferedReader(fileReader);
