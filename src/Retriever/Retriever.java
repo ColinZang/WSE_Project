@@ -43,22 +43,58 @@ public class Retriever {
             new HashMap<Sequence, HashSet<Page>>();
     private static PriorityQueue<Page> results =
             new PriorityQueue<Page>(new PageComp());
+    private static HashSet<String> stopList =
+            new HashSet<String>();
+    private static String warning = null;
 
-    private static void run(String query, String stopFile) {
+    public static void prepare() {
+        n = 960000;
+        max = 50;
+        indexPath = "../results/indexWithRank/";
+        pagePath = "../results/pages/";
+        String stopFile = "../data/ShotStopList.txt";
+        loadStop(stopFile);
+    }
+
+    public static List<Page> run(String query) {
+        final int MAX_QUERY_LENGTH = 256;
+        if (query.length() > MAX_QUERY_LENGTH) {
+            warning = "Query exceeds " + MAX_QUERY_LENGTH + " characters long, " +
+                    "please try something shorter";
+            System.out.println(warning);
+            return new ArrayList<Page>();
+        }
+        parseQuery(query);
+        if (warning != null) {
+            return new ArrayList<Page>();
+        }
+        getPages();
+        calculate();
+        return returnResults();
+    }
+
+    public static String getWarning() {
+        return warning;
+    }
+
+    private static void runMain(String query, String stopFile) {
         final int MAX_QUERY_LENGTH = 256;
         if (query.length() > MAX_QUERY_LENGTH) {
             System.out.println("Query exceeds " + MAX_QUERY_LENGTH + " characters long, " +
                     "please try something shorter");
             System.exit(1);
         }
-        HashSet<String> stopList = loadStop(stopFile);
-        parseQuery(query, stopList);
+        loadStop(stopFile);
+        parseQuery(query);
+        if (warning != null) {
+            System.exit(1);
+        }
         getPages();
         calculate();
         returnResults();
     }
 
-    private static void parseQuery(String query, HashSet<String> stopList) {
+    private static void parseQuery(String query) {
         Parser parser = new Parser(query, stopList);
         parser.Parse();
         List<String> tokens = parser.GetResTokens();
@@ -90,8 +126,10 @@ public class Retriever {
             seqList.add(seq);
         }
         if (queryWords.size() == 0) {
-            System.out.println("Query may be too general, please try something else");
-            System.exit(1);
+            warning = "Query may be too general, please try something else";
+            System.out.println(warning);
+            return;
+//            System.exit(1);
         }
         Collections.sort(seqList, new SeqComp());
     }
@@ -234,11 +272,13 @@ public class Retriever {
         }
     }
 
-    private static void returnResults() {
+    private static List<Page> returnResults() {
+        List<Page> finalResults = new ArrayList<Page>();
         if (results.size() == 0) {
-            System.out.println("No relevant results are available, sorry, " +
-                    "please try something else");
-            return;
+            warning = "No relevant results are available, sorry, " +
+                    "please try something else";
+            System.out.println(warning);
+            return finalResults;
         }
         int count = 0;
 //        Collections.sort(results, new PageComp());
@@ -251,13 +291,16 @@ public class Retriever {
 //            }
 //        }
         while (!results.isEmpty()) {
-            System.out.println(results.poll());
+            Page page = results.poll();
+            System.out.println(page);
 //            System.out.println(results.poll().getScoreInfo());
             count++;
+            finalResults.add(page);
             if (count >= max) {
-                return;
+                break;
             }
         }
+        return finalResults;
     }
 
     public static double getWeight(Sequence seq) {
@@ -393,7 +436,7 @@ public class Retriever {
         return token;
     }
 
-    private static HashSet<String> loadStop(String filePath) {
+    private static void loadStop(String filePath) {
         HashSet<String> stopList = new HashSet<String>();
         try {
             FileReader fileReader = new FileReader(filePath);
@@ -406,7 +449,6 @@ public class Retriever {
         } catch (IOException e) {
 //            System.out.println("Read in stop list not successful");
         }
-        return stopList;
     }
 
 //    private static void checkArgs(String[] args) {
@@ -511,6 +553,6 @@ public class Retriever {
         n = Integer.parseInt(args[7]);
         max = Integer.parseInt(args[9]);
         String stopFile = args[11];
-        run(query, stopFile);
+        runMain(query, stopFile);
     }
 }

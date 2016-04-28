@@ -80,8 +80,7 @@ public class Page {
         for (Sequence seq: currentSeq) {
             double wordWeight = Retriever.getWeight(seq);
             String token = seq.getToken();
-            String[] parts = token.split("\\s+");
-            int size = parts.length;
+            int size = seq.getRight() - seq.getLeft() + 1;
             int titleCount = getCount(token.toLowerCase(), title.toLowerCase());
             if (titleCount != 0) {
                 setMatch(size);
@@ -90,7 +89,7 @@ public class Page {
             int lowerCount = getCount(token.toLowerCase(), lowerContent);
             if (lowerCount == 0) {
 //            scoreInfo += "Token: " + token + " Original=0 Lower=0 WordWeight=" + wordWeight + " wordTotal=0\n";
-                return;
+                continue;
             }
             int originalCount = 0;
             if (!token.equals(token.toLowerCase())) {
