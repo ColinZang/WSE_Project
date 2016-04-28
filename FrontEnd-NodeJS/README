@@ -7,6 +7,16 @@ Gived up play framework and switched to AngularJS, Node.js for the following rea
    which is because my laptop only has 4GB memory and does not have SSD.
 
 
+Procedures:
+
+1. Create UI
+2. User types query string which is converted to http GET request,like
+   '/search?query=machine%20learning&format=html&numdocs=10&know=true&page=1'
+3. node redirects this request to port 23456 to let java ServerSocket handle.
+   returned results are documents.
+4. controller handles returned documents and display href link, abstraction
+
+
 Timeline:
 
 4/23/2016

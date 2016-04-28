@@ -19,6 +19,7 @@ import java.util.Comparator;
 import java.util.Collections;
 import java.net.URI;
 
+
 /**
  * Created by Wenzhao on 4/21/16.
  */
@@ -26,6 +27,8 @@ public class Retriever {
     private static final String USAGE =
             "USAGE: java Retriever [-query QUERY] [-index INDEX_PATH] [-page PAGE_PATH] " +
                     "[-total TOTAL_PAGE] [-max MAX_RESULT] [-stop STOP_PATH]";
+
+
     private static int n;
     private static int max;
     private static String indexPath;
@@ -42,6 +45,7 @@ public class Retriever {
 
     private static void run(String query, String stopFile) {
         HashSet<String> stopList = loadStop(stopFile);
+        // Updated queryWords
         parseQuery(query, stopList);
         getPages();
         calculate();
@@ -49,6 +53,7 @@ public class Retriever {
     }
 
     private static void parseQuery(String query, HashSet<String> stopList) {
+      // Parse query to a list of tokens and tokenType.
         Parser parser = new Parser(query, stopList);
         parser.Parse();
         List<String> tokens = parser.GetResTokens();
@@ -100,6 +105,9 @@ public class Retriever {
         return result;
     }
 
+    /*
+     * Update pages<Sequence, HashSet<Page>>
+     */
     private static void getPages() {
         for (int i = 0; i < seqList.size(); i++) {
             Sequence seq = seqList.get(i);
@@ -135,7 +143,10 @@ public class Retriever {
             }
         }
     }
-
+    
+    /**
+     * Update results with calculated page score.
+     */
     private static void calculate() {
 //        System.out.println("Calculating...");
         long startTime = System.currentTimeMillis();
@@ -211,6 +222,9 @@ public class Retriever {
         }
     }
 
+    /**
+     * Print title, url and preview of each matched page to console.
+     */
     private static void returnResults() {
         if (results.size() == 0) {
             System.out.println("No relevant results are available, sorry");
@@ -237,8 +251,9 @@ public class Retriever {
         }
         return maxWeight;
     }
-
+    
     // by Guo Min
+    // Update seenPages. Find all pages that are related to this seq.
     private static HashSet<Page> readIndex(Sequence seq) {
         HashSet<Page> pageSet = new HashSet<Page>();
         String word = seq.getToken();
@@ -463,6 +478,8 @@ public class Retriever {
             System.exit(1);
         }
     }
+
+
 
     public static void main(String[] args) {
         checkArgs(args);
