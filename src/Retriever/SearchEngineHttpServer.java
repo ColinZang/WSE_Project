@@ -10,11 +10,13 @@ import java.util.concurrent.Executors;
  * Created by BINLI on 4/27/16.
  */
 public class SearchEngineHttpServer {
-    private static int PORT = 8080;
+    private static int PORT = 23456;
 
     public static void main (String[] args) throws IOException, ClassNotFoundException {
 
         QueryHandler handler = new QueryHandler();
+        // Set up parameters for searching pages for query string.
+        Retriever.prepare();
         // Start http server to serve incoming request.
         InetSocketAddress address = new InetSocketAddress(SearchEngineHttpServer.PORT);
         HttpServer server = HttpServer.create(address, -1);

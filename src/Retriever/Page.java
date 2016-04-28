@@ -1,9 +1,8 @@
 package Retriever;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -47,6 +46,8 @@ public class Page {
         return title + "\n" + url + "\n" + preview + "\n";
     }
 
+    public String getPreview() { return preview;}
+
     public String getID() {
         return id;
     }
@@ -65,6 +66,33 @@ public class Page {
 
     public int getMatch() {
         return match;
+    }
+
+    /**
+     * ADDED BY BIN LI
+     * Convert page info to JSON format string.
+     */
+    public String toJSONResult() {
+        StringBuilder pageJSON = new StringBuilder();
+        pageJSON.append("{\"id\": ");
+        pageJSON.append(getID());
+        pageJSON.append(", \"title\": ");
+        try {
+            pageJSON.append("\"").append(URLEncoder.encode(getTitle(), "UTF-8")).append("\"");
+        } catch (UnsupportedEncodingException e) {
+            pageJSON.append("null");
+        }
+        pageJSON.append(", \"url\": \"").append(getUrl())
+                .append("\", \"preview\": ");
+        try {
+            pageJSON.append("\"").append(URLEncoder.encode(getPreview(), "UTF-8"))
+                    .append("\"");
+        } catch (UnsupportedEncodingException e) {
+            pageJSON.append("null");
+        }
+        pageJSON.append("}");
+
+        return pageJSON.toString();
     }
 
     public String getScoreInfo() {
@@ -207,4 +235,7 @@ public class Page {
         double score = 1 + Math.log(count) / Math.log(2);
         return score * wordWeight;
     }
+
+
+
 }

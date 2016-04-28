@@ -35,13 +35,13 @@ public class QueryHandler implements HttpHandler {
                 } else if (key.equals("max")) {
                     try {
                         _max = Integer.parseInt(val);
-                    } catch (NumberFormatException) {
+                    } catch (NumberFormatException e) {
                         // Ignored.
                     }
                 } else if (key.equals("pageresults")) {
                     try {
                         _pageResults = Integer.parseInt(val);
-                    } catch (NumberFormatException) {
+                    } catch (NumberFormatException e) {
                         // Ignored.
                     }
                 }
@@ -86,17 +86,42 @@ public class QueryHandler implements HttpHandler {
             outClientMsg(exchange, "Query is null.");
         }
 
+        String query = qArgs._query.replace("%20", " ").replace("+", " ");
+        System.out.println("Before passing the retriever, query is: " + query);
         /**
-         * TODO
          * Get all pages for query(Retriever, ProcessBuilder).
          * Construct HTML output with given pages(List).
-         * Renders it to frontend.
+         * Renders it to frontend
+         * NOTE: _query is user input query.
          */
-        List<Page> scoredPages = Retriever.run(qArgs._query, qArgs._pageResults,
-                qArgs._max, indexPath, pagePath, stopwordspath);
 
+        List<Page> scoredPages = Retriever.run(query);
+        if (scoredPages.isEmpty()) {
+            outClientMsg(exchange, Retriever.getWarning());
+        }
 
+        if (URIPath.equals("/search")) {
+            StringBuilder res = new StringBuilder();
+            getJSONPages(scoredPages, res);
+            outClientMsg(exchange, res.toString());
+            System.out.println("Finished query: " + qArgs._query);
+        }
 
+    }
+
+    /**
+     * Render HTML output to client.
+     */
+    private void getJSONPages(final List<Page> pages, StringBuilder response) {
+        response.append("{\n\"results\":[ \n");
+        for (Page page : pages) {
+            response.append(page.toJSONResult());
+            response.append(",\n");
+        }
+        if (pages.size() != 0) {
+            response.deleteCharAt(response.length() - 2);
+        }
+        response.append("]").append("\n}");
     }
 
     private void outClientMsg(HttpExchange exchange, String msg) throws IOException {
