@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Comparator;
 import java.util.Collections;
+import java.util.PriorityQueue;
 import java.net.URI;
 
 
@@ -37,23 +38,66 @@ public class Retriever {
     private static HashMap<Integer, Double> wordWeights =
             new HashMap<Integer, Double>();
     private static List<Sequence> seqList = new ArrayList<Sequence>();
+    private static HashMap<Sequence, Double> seqWeight =
+            new HashMap<Sequence, Double>();
     private static HashMap<String, Page> seenPages =
             new HashMap<String, Page>();
     private static HashMap<Sequence, HashSet<Page>> pages =
             new HashMap<Sequence, HashSet<Page>>();
-    private static List<Page> results = new ArrayList<Page>();
+    private static PriorityQueue<Page> results =
+            new PriorityQueue<Page>(new PageComp());
+    private static HashSet<String> stopList =
+            new HashSet<String>();
+    private static String warning = null;
 
-    private static void run(String query, String stopFile) {
-        HashSet<String> stopList = loadStop(stopFile);
-        // Updated queryWords
-        parseQuery(query, stopList);
+    public static void prepare() {
+        n = 960000;
+        max = 50;
+        indexPath = "../results/indexWithRank/";
+        pagePath = "../results/pages/";
+        String stopFile = "../data/ShotStopList.txt";
+        loadStop(stopFile);
+    }
+
+    public static List<Page> run(String query) {
+        final int MAX_QUERY_LENGTH = 256;
+        if (query.length() > MAX_QUERY_LENGTH) {
+            warning = "Query exceeds " + MAX_QUERY_LENGTH + " characters long, " +
+                    "please try something shorter";
+            System.out.println(warning);
+            return new ArrayList<Page>();
+        }
+        parseQuery(query);
+        if (warning != null) {
+            return new ArrayList<Page>();
+        }
+        getPages();
+        calculate();
+        return returnResults();
+    }
+
+    public static String getWarning() {
+        return warning;
+    }
+
+    private static void runMain(String query, String stopFile) {
+        final int MAX_QUERY_LENGTH = 256;
+        if (query.length() > MAX_QUERY_LENGTH) {
+            System.out.println("Query exceeds " + MAX_QUERY_LENGTH + " characters long, " +
+                    "please try something shorter");
+            System.exit(1);
+        }
+        loadStop(stopFile);
+        parseQuery(query);
+        if (warning != null) {
+            System.exit(1);
+        }
         getPages();
         calculate();
         returnResults();
     }
 
-    private static void parseQuery(String query, HashSet<String> stopList) {
-      // Parse query to a list of tokens and tokenType.
+    private static void parseQuery(String query) {
         Parser parser = new Parser(query, stopList);
         parser.Parse();
         List<String> tokens = parser.GetResTokens();
@@ -85,8 +129,10 @@ public class Retriever {
             seqList.add(seq);
         }
         if (queryWords.size() == 0) {
-            System.out.println("Query may be too general, please try something else");
-            System.exit(1);
+            warning = "Query may be too general, please try something else";
+            System.out.println(warning);
+            return;
+//            System.exit(1);
         }
         Collections.sort(seqList, new SeqComp());
     }
@@ -154,27 +200,39 @@ public class Retriever {
         HashSet<URI> seenUrls = new HashSet<URI>();
         HashSet<String> seenTitles = new HashSet<String>();
         final int customMax = 10000;
-        // should have grouped the same length seq together
-        for (int i = seqList.size() - 1; i >= 0; i--) {
+        int i = seqList.size() - 1;
+        // group the same length seq together
+        while (i >= 0) {
 //            System.out.println(i + " round");
-            Sequence seq = seqList.get(i);
-            if (seenSeqs.contains(seq)) {
+            int currentLength = seqList.get(i).getRight() - seqList.get(i).getLeft();
+            List<Page> current = new ArrayList<Page>();
+            while (i >= 0 &&
+                    seqList.get(i).getRight() - seqList.get(i).getLeft() == currentLength) {
+                Sequence seq = seqList.get(i);
+                i--;
+                if (seenSeqs.contains(seq)) {
+                    continue;
+                } else {
+                    seenSeqs.add(seq);
+                }
+                HashSet<Page> set = pages.get(seq);
+                for (Page page : set) {
+                    if (page.getMatch() != -1) {
+                        continue;
+                    }
+                    if (page.isSeen() && !page.isValid()) {
+                        continue;
+                    }
+                    page.setSeq(seq);
+                    current.add(page);
+                }
+            }
+            if (current.size() == 0) {
                 continue;
             }
-            else {
-                seenSeqs.add(seq);
-            }
-            HashSet<Page> set = pages.get(seq);
-            List<Page> current = new ArrayList<Page>();
-            for (Page page: set) {
-                if (page.getMatch() != -1) {
-                    continue;
-                }
-                current.add(page);
-            }
             Collections.sort(current, new PageRankComp());
-            for (Page page: current) {
-                if (!page.isValid()) {
+            for (Page page : current) {
+                if (!page.isSeen()) {
                     page.parsePage();
                     if (!page.isValid()) {
                         continue;
@@ -184,24 +242,25 @@ public class Retriever {
                         url = new URI(page.getUrl());
                     } catch (URISyntaxException e) {
 //                        System.out.println("not a url: " + page.getUrl());
+                        page.setValid(false);
                         continue;
                     }
                     if (seenUrls.contains(url)) {
+                        page.setValid(false);
                         continue;
                     }
                     else {
                         seenUrls.add(url);
                     }
                     if (seenTitles.contains(page.getTitle())) {
+                        page.setValid(false);
                         continue;
                     }
                     else {
                         seenTitles.add(page.getTitle());
                     }
                 }
-                String token = seq.getToken();
-                double weight = getWeight(seq);
-                page.calculateScore(token, weight);
+                page.calculateScore();
 //                for (int index = i; index >= 0; index--) {
 //                    Sequence currentSeq = seqList.get(index);
 //                    String token = currentSeq.getToken();
@@ -222,33 +281,48 @@ public class Retriever {
         }
     }
 
-    /**
-     * Print title, url and preview of each matched page to console.
-     */
-    private static void returnResults() {
+    private static List<Page> returnResults() {
+        List<Page> finalResults = new ArrayList<Page>();
         if (results.size() == 0) {
-            System.out.println("No relevant results are available, sorry");
-            return;
+            warning = "No relevant results are available, sorry, " +
+                    "please try something else";
+            System.out.println(warning);
+            return finalResults;
         }
-        Collections.sort(results, new PageComp());
         int count = 0;
-        for (Page page: results) {
+//        Collections.sort(results, new PageComp());
+//        for (Page page: results) {
+//            System.out.println(page);
+////            System.out.println(results.poll().getScoreInfo());
+//            count++;
+//            if (count >= max) {
+//                return;
+//            }
+//        }
+        while (!results.isEmpty()) {
+            Page page = results.poll();
             System.out.println(page);
-            //System.out.println(page.getScoreInfo());
+//            System.out.println(results.poll().getScoreInfo());
             count++;
+            finalResults.add(page);
             if (count >= max) {
-                return;
+                break;
             }
         }
+        return finalResults;
     }
 
-    private static double getWeight(Sequence seq) {
+    public static double getWeight(Sequence seq) {
+        if (seqWeight.containsKey(seq)) {
+            return seqWeight.get(seq);
+        }
         int left = seq.getLeft();
         int right = seq.getRight();
         double maxWeight = wordWeights.get(left);
         for (int i = left + 1; i <= right; i++) {
             maxWeight = Math.max(maxWeight, wordWeights.get(i));
         }
+        seqWeight.put(seq, maxWeight);
         return maxWeight;
     }
     
@@ -261,9 +335,6 @@ public class Retriever {
 //        System.out.println("stemmed is " + word);
         int count = 0;
         try {
-            if (!indexPath.endsWith(File.separator)) {
-                indexPath += File.separator;
-            }
             final int MODULE = 500;
             int wordHash = Math.abs(word.hashCode()) % MODULE;
 //            System.out.println("folder name is " + wordHash);
@@ -375,7 +446,7 @@ public class Retriever {
         return token;
     }
 
-    private static HashSet<String> loadStop(String filePath) {
+    private static void loadStop(String filePath) {
         HashSet<String> stopList = new HashSet<String>();
         try {
             FileReader fileReader = new FileReader(filePath);
@@ -388,107 +459,112 @@ public class Retriever {
         } catch (IOException e) {
 //            System.out.println("Read in stop list not successful");
         }
-        return stopList;
     }
 
-    private static void checkArgs(String[] args) {
-        if (args.length != 12) {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        if (args[0].equals("-query")) {
-            final int MAX_QUERY_LENGTH = 256;
-            String query = args[1];
-            if (query.length() > MAX_QUERY_LENGTH) {
-                System.out.println("Query exceeded maximum length, please try something else");
-                System.exit(1);
-            }
-        }
-        else {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        if (args[2].equals("-index")) {
-            checkPath(args[3]);
-        }
-        else {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        if (args[4].equals("-page")) {
-            checkPath(args[5]);
-        }
-        else {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        if (args[6].equals("-total")) {
-            int number = 0;
-            try {
-                number = Integer.parseInt(args[7]);
-            } catch (RuntimeException e) {
-//                System.out.println("Please provide a positive integer for total");
-                System.exit(1);
-            }
-            if (number <= 0) {
-//                System.out.println("Please provide a positive integer for total");
-                System.exit(1);
-            }
-        }
-        else {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        if (args[8].equals("-max")) {
-            int number = 0;
-            try {
-                number = Integer.parseInt(args[9]);
-            } catch (RuntimeException e) {
-//                System.out.println("Please provide a positive integer for max");
-                System.exit(1);
-            }
-            if (number <= 0) {
-//                System.out.println("Please provide a positive integer for max");
-                System.exit(1);
-            }
-        }
-        else {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        if (!args[10].equals("-stop")) {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-    }
-
-    private static void checkPath(String docsPath) {
-        if (docsPath == null) {
-//            System.out.println(USAGE);
-            System.exit(1);
-        }
-        Path docDir = Paths.get(docsPath);
-        if (!Files.isReadable(docDir)) {
-//            System.out.println("Directory '" + docDir.toAbsolutePath() + "' does not "
-//                    + "exist or is not readable, please check the path");
-            System.exit(1);
-        }
-        if (!Files.isDirectory(docDir)) {
-//            System.out.println("Please provide the path of a directory");
-            System.exit(1);
-        }
-    }
+//    private static void checkArgs(String[] args) {
+//        if (args.length != 12) {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        if (args[0].equals("-query")) {
+//            final int MAX_QUERY_LENGTH = 256;
+//            String query = args[1];
+//            if (query.length() > MAX_QUERY_LENGTH) {
+//                System.out.println("Query exceeded maximum length, please try something else");
+//                System.exit(1);
+//            }
+//        }
+//        else {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        if (args[2].equals("-index")) {
+//            checkPath(args[3]);
+//        }
+//        else {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        if (args[4].equals("-page")) {
+//            checkPath(args[5]);
+//        }
+//        else {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        if (args[6].equals("-total")) {
+//            int number = 0;
+//            try {
+//                number = Integer.parseInt(args[7]);
+//            } catch (RuntimeException e) {
+////                System.out.println("Please provide a positive integer for total");
+//                System.exit(1);
+//            }
+//            if (number <= 0) {
+////                System.out.println("Please provide a positive integer for total");
+//                System.exit(1);
+//            }
+//        }
+//        else {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        if (args[8].equals("-max")) {
+//            int number = 0;
+//            try {
+//                number = Integer.parseInt(args[9]);
+//            } catch (RuntimeException e) {
+////                System.out.println("Please provide a positive integer for max");
+//                System.exit(1);
+//            }
+//            if (number <= 0) {
+////                System.out.println("Please provide a positive integer for max");
+//                System.exit(1);
+//            }
+//        }
+//        else {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        if (!args[10].equals("-stop")) {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//    }
+//
+//    private static void checkPath(String docsPath) {
+//        if (docsPath == null) {
+////            System.out.println(USAGE);
+//            System.exit(1);
+//        }
+//        Path docDir = Paths.get(docsPath);
+//        if (!Files.isReadable(docDir)) {
+////            System.out.println("Directory '" + docDir.toAbsolutePath() + "' does not "
+////                    + "exist or is not readable, please check the path");
+//            System.exit(1);
+//        }
+//        if (!Files.isDirectory(docDir)) {
+////            System.out.println("Please provide the path of a directory");
+//            System.exit(1);
+//        }
+//    }
 
 
 
     public static void main(String[] args) {
-        checkArgs(args);
+//        checkArgs(args);
         String query = args[1];
         indexPath = args[3];
+        if (!indexPath.endsWith(File.separator)) {
+            indexPath += File.separator;
+        }
         pagePath = args[5];
+        if (!pagePath.endsWith(File.separator)) {
+            pagePath += File.separator;
+        }
         n = Integer.parseInt(args[7]);
         max = Integer.parseInt(args[9]);
         String stopFile = args[11];
-        run(query, stopFile);
+        runMain(query, stopFile);
     }
 }
