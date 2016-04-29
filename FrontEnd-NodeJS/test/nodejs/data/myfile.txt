@@ -1,0 +1,1 @@
+You should notice that if you navigate to http://localhost:8080/wait and then to http://localhost:8080 we no longer have to wait for our blocking script to finish. Obviously this is a pointless example because our blocking script isn't doing anything worthwhile. So lets look at a slightly more interesting example of a non-blocking script we can create that uses callbacks.

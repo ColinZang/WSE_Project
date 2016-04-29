@@ -6,6 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.net.URLEncoder;
+import java.io.UnsupportedEncodingException;
 
 /**
  * Created by Wenzhao on 4/22/16.
@@ -65,6 +67,39 @@ public class Page {
 
     public int getMatch() {
         return match;
+    }
+
+    public String getPreview() {
+	return preview;
+    }
+
+     /**
+     * ADDED BY BIN LI
+     * Convert page info to JSON format string.
+     */
+    public String toJSONResult() {
+        StringBuilder pageJSON = new StringBuilder();
+        pageJSON.append("{\"id\": ");
+	pageJSON.append("\"");
+        pageJSON.append(getID());
+	pageJSON.append("\"");
+        pageJSON.append(", \"title\": ");
+        try {
+            pageJSON.append("\"").append(URLEncoder.encode(getTitle(), "UTF-8")).append("\"");
+        } catch (UnsupportedEncodingException e) {
+            pageJSON.append("null");
+        }
+        pageJSON.append(", \"url\": \"").append(getUrl())
+                .append("\", \"preview\": ");
+        try {
+            pageJSON.append("\"").append(URLEncoder.encode(getPreview(), "UTF-8"))
+                    .append("\"");
+        } catch (UnsupportedEncodingException e) {
+            pageJSON.append("null");
+        }
+        pageJSON.append("}");
+
+        return pageJSON.toString();
     }
 
     public String getScoreInfo() {

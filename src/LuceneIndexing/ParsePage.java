@@ -1,4 +1,4 @@
-package Indexing;
+package LuceneIndexing;
 
 
 import java.io.BufferedReader;
