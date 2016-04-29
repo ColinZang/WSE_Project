@@ -1,3 +1,15 @@
+TODO:
+Pagination. This is a feature.
+Url encoding decoding may have issues.
+Implement go(1).
+
+Logic:
+Node starts a server that host web page on port 3000. 
+Client type in query on web page. An http GET request will be specified in controller ($http.get('/search?query=' + $scope.queryWord + '&max=100' + '&pageResults=10&page='+pageNum) and this request will be parsed by api.js on node. Node is listening for a “/search” context, it will parse the search request once it comes.
+The parsed request is sent to another server that back-end java code starts on port 23456. 
+After java code processes the request, the response will be sent to controller and then some $scope fields are changed. Since the data-binding, the corresponding components in .html will change. Therefore, user is able to see the return results.
+
+Details:
 1. Create HttpServer in Retriever.
 2. Create QueryHandler class. Use HttpHandler's handle() method to handle incoming http request, including
     extract uriPath (/search) and uriQuery. uriQuery is passed to CGIArguments static class
