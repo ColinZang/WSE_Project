@@ -29,7 +29,7 @@ public class Retriever {
                     "[-total TOTAL_PAGE] [-max MAX_RESULT] [-stop STOP_PATH]";
     private static int n;
     private static int max;
-    private static String indexPath;
+    private static String indexPath = null;
     private static String pagePath;
     private static List<String> queryWords = new ArrayList<String>();
     private static HashMap<Integer, Double> wordWeights =
@@ -47,16 +47,12 @@ public class Retriever {
             new HashSet<String>();
     private static String warning = null;
 
-    public static void prepare() {
-        n = 960000;
-        max = 50;
-        indexPath = "../results/indexWithRank/";
-        pagePath = "../results/pages/";
-        String stopFile = "../data/ShotStopList.txt";
-        loadStop(stopFile);
-    }
-
     public static List<Page> run(String query) {
+        if (indexPath == null) {
+            overallInitialize();
+        }
+        initialize();
+        System.out.println("query is " + query);
         final int MAX_QUERY_LENGTH = 256;
         if (query.length() > MAX_QUERY_LENGTH) {
             warning = "Query exceeds " + MAX_QUERY_LENGTH + " characters long, " +
@@ -75,6 +71,27 @@ public class Retriever {
 
     public static String getWarning() {
         return warning;
+    }
+
+    private static void overallInitialize() {
+        n = 960000;
+        max = 50;
+        indexPath = "../results/indexWithRank/";
+        pagePath = "../results/pages/";
+        String stopFile = "../data/ShotStopList.txt";
+        loadStop(stopFile);
+    }
+
+    private static void initialize() {
+        queryWords = new ArrayList<String>();
+        wordWeights = new HashMap<Integer, Double>();
+        seqList = new ArrayList<Sequence>();
+        seqWeight = new HashMap<Sequence, Double>();
+        seenPages = new HashMap<String, Page>();
+        pages = new HashMap<Sequence, HashSet<Page>>();
+        results = new PriorityQueue<Page>(new PageComp());
+        warning = null;
+        System.out.println("Initialize successful");
     }
 
     private static void runMain(String query, String stopFile) {
@@ -448,6 +465,7 @@ public class Retriever {
                 stopList.add(word);
             }
             reader.close();
+            System.out.println("Read in stop list successful");
         } catch (IOException e) {
 //            System.out.println("Read in stop list not successful");
         }

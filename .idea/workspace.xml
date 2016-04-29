@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="e5bdcc99-827f-4073-8b3c-e1a79aa42c4b" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Retriever/Page.java" afterPath="$PROJECT_DIR$/src/Retriever/Page.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Retriever/Retriever.java" afterPath="$PROJECT_DIR$/src/Retriever/Retriever.java" />
     </list>
     <ignored path="WSE_Project.iws" />
@@ -39,7 +38,7 @@
       <file leaf-file-name="Page.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Retriever/Page.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1545">
+            <state relative-caret-position="1470">
               <caret line="123" column="0" selection-start-line="123" selection-start-column="0" selection-end-line="123" selection-end-column="0" />
               <folding>
                 <element signature="imports" expanded="true" />
@@ -53,7 +52,7 @@
       <file leaf-file-name="Parser.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Parser/Parser.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="390">
+            <state relative-caret-position="300">
               <caret line="26" column="22" selection-start-line="26" selection-start-column="22" selection-end-line="26" selection-end-column="22" />
               <folding>
                 <element signature="imports" expanded="true" />
@@ -95,7 +94,7 @@
       <file leaf-file-name="PageRank.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/PageRank/PageRank.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3540">
+            <state relative-caret-position="3360">
               <caret line="236" column="27" selection-start-line="236" selection-start-column="27" selection-end-line="236" selection-end-column="27" />
               <folding>
                 <element signature="imports" expanded="true" />
@@ -107,12 +106,10 @@
       <file leaf-file-name="Retriever.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/Retriever/Retriever.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="535">
-              <caret line="559" column="1" selection-start-line="559" selection-start-column="1" selection-end-line="559" selection-end-column="1" />
+            <state relative-caret-position="30">
+              <caret line="78" column="48" selection-start-line="78" selection-start-column="48" selection-end-line="78" selection-end-column="48" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#1656#1664#0" expanded="true" />
-                <element signature="e#10377#10383#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -131,7 +128,7 @@
       <file leaf-file-name="RemoveDuplicates.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/PageRank/RemoveDuplicates.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="675">
+            <state relative-caret-position="570">
               <caret line="45" column="45" selection-start-line="45" selection-start-column="45" selection-end-line="45" selection-end-column="45" />
               <folding>
                 <element signature="imports" expanded="true" />
@@ -173,7 +170,7 @@
   <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="1280" />
-    <option name="height" value="737" />
+    <option name="height" value="717" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="false">
     <OptionsSetting value="true" id="Add" />
@@ -200,6 +197,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -324,9 +322,8 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
-      <pane id="Scratches" />
       <pane id="PackagesPane" />
+      <pane id="Scratches" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -738,12 +735,19 @@
       <option name="project" value="LOCAL" />
       <updated>1461802638701</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="Minor change on score calculation&#10;">
+      <created>1461862753781</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1461862753781</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1280" height="737" extended-state="6" />
-    <editor active="false" />
+    <frame x="0" y="23" width="1280" height="717" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -755,7 +759,7 @@
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2109375" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2109375" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -800,7 +804,8 @@
     <MESSAGE value="Added title checking" />
     <MESSAGE value="Added double scoring" />
     <MESSAGE value="Added Retriever API" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added Retriever API" />
+    <MESSAGE value="Minor change on score calculation&#10;" />
+    <option name="LAST_COMMIT_MESSAGE" value="Minor change on score calculation&#10;" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -1086,7 +1091,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Parser/Parser.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
+        <state relative-caret-position="300">
           <caret line="26" column="22" selection-start-line="26" selection-start-column="22" selection-end-line="26" selection-end-column="22" />
           <folding>
             <element signature="imports" expanded="true" />
@@ -1104,7 +1109,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/PageRank/PageRank.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3540">
+        <state relative-caret-position="3360">
           <caret line="236" column="27" selection-start-line="236" selection-start-column="27" selection-end-line="236" selection-end-column="27" />
           <folding>
             <element signature="imports" expanded="true" />
@@ -1114,7 +1119,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/PageRank/RemoveDuplicates.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="675">
+        <state relative-caret-position="570">
           <caret line="45" column="45" selection-start-line="45" selection-start-column="45" selection-end-line="45" selection-end-column="45" />
           <folding>
             <element signature="imports" expanded="true" />
@@ -1140,7 +1145,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Retriever/Page.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1545">
+        <state relative-caret-position="1470">
           <caret line="123" column="0" selection-start-line="123" selection-start-column="0" selection-end-line="123" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
@@ -1160,12 +1165,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Retriever/Retriever.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="535">
-          <caret line="559" column="1" selection-start-line="559" selection-start-column="1" selection-end-line="559" selection-end-column="1" />
+        <state relative-caret-position="30">
+          <caret line="78" column="48" selection-start-line="78" selection-start-column="48" selection-end-line="78" selection-end-column="48" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#1656#1664#0" expanded="true" />
-            <element signature="e#10377#10383#0" expanded="true" />
           </folding>
         </state>
       </provider>
