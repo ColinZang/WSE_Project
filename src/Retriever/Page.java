@@ -70,19 +70,19 @@ public class Page {
     }
 
     public String getPreview() {
-	return preview;
+        return preview;
     }
 
-     /**
+    /**
      * ADDED BY BIN LI
      * Convert page info to JSON format string.
      */
     public String toJSONResult() {
         StringBuilder pageJSON = new StringBuilder();
         pageJSON.append("{\"id\": ");
-	pageJSON.append("\"");
+        pageJSON.append("\"");
         pageJSON.append(getID());
-	pageJSON.append("\"");
+        pageJSON.append("\"");
         pageJSON.append(", \"title\": ");
         try {
             pageJSON.append("\"").append(URLEncoder.encode(getTitle(), "UTF-8")).append("\"");
@@ -102,6 +102,9 @@ public class Page {
         return pageJSON.toString();
     }
 
+    /**
+     * This method prints out the score calculation history, for debug purpose
+     */
     public String getScoreInfo() {
         return scoreInfo + "Dependency Score=" + dependencyScore + " pageRank=" + pageRank +
                 " total=" + totalScore + "\n";
@@ -111,6 +114,10 @@ public class Page {
         return titleContains;
     }
 
+    /**
+     * This method calculates the score based on the given sequence (because the same page will
+     * have different scores for different sequences (i.e. word combination))
+     */
     public void calculateScore() {
         for (Sequence seq: currentSeq) {
             double wordWeight = Retriever.getWeight(seq);
@@ -149,6 +156,9 @@ public class Page {
         return dependencyScore;
     }
 
+    /**
+     * test if the page has complete information, incomplete pages will be discarded
+     */
     public boolean isValid() {
         return valid;
     }
@@ -157,6 +167,9 @@ public class Page {
         this.valid = valid;
     }
 
+    /**
+     * test if the page has been seen, to avoid duplicate parsing
+     */
     public boolean isSeen() {
         return seen;
     }
@@ -169,6 +182,10 @@ public class Page {
         return currentSeq.isEmpty();
     }
 
+    /**
+     * Parse the page file and store all useful information, please see
+     * the structure of a page file for details
+     */
     public void parsePage() {
         seen = true;
         int first = id.indexOf('_', 0);
@@ -207,6 +224,10 @@ public class Page {
         }
     }
 
+    /**
+     * Count the number of occurrences of a token among the contents of the page,
+     * in order to calculate dependency score later
+     */
     private int getCount(String token, String content) {
         int index = 0;
         int count = 0;

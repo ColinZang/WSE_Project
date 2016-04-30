@@ -8,9 +8,6 @@ import java.util.List;
 public class RetrieverAPI {
     public static void main(String[] args) {
 
-        // only need to prepare once
-        Retriever.prepare();
-
         // enter busy waiting
         for (;;) {
             String query = null;
