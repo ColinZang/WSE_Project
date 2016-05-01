@@ -1,4 +1,4 @@
-package Indexing;
+package LuceneIndexing;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
