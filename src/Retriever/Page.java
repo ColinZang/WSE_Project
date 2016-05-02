@@ -1,9 +1,8 @@
 package Retriever;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.ArrayList;
 import java.net.URLEncoder;
@@ -48,6 +47,8 @@ public class Page {
     public String toString() {
         return title + "\n" + url + "\n" + preview + "\n";
     }
+
+    public String getPreview() { return preview;}
 
     public String getID() {
         return id;

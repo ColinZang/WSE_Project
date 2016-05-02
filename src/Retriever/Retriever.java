@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.PriorityQueue;
 import java.net.URI;
 
+
 /**
  * Created by Wenzhao on 4/21/16.
  */
@@ -27,6 +28,8 @@ public class Retriever {
     private static final String USAGE =
             "USAGE: java Retriever [-query QUERY] [-index INDEX_PATH] [-page PAGE_PATH] " +
                     "[-total TOTAL_PAGE] [-max MAX_RESULT] [-stop STOP_PATH]";
+
+
     private static int n;
     private static int max;
     private static String indexPath = null;
@@ -406,7 +409,7 @@ public class Retriever {
         seqWeight.put(seq, maxWeight);
         return maxWeight;
     }
-
+    
     // by Guo Min
     /**
      * This method visits the actual index file, and read in the contents
@@ -658,6 +661,8 @@ public class Retriever {
 //            System.exit(1);
 //        }
 //    }
+
+
 
     public static void main(String[] args) {
 //        checkArgs(args);
