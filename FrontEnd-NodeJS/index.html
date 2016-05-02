@@ -27,46 +27,17 @@
             </div>
         </div>
         <div style="text-align: center; margin-top: 20px; margin-bottom: 20px">
-            <form>
-                <input type="radio" ng-model="ranker" value="guess what"> Guest what you like!
-                <!-- <input type="radio" ng-model="ranker" value="comprehensive" style="margin-left: 20px"> COMPREHENSIVE -->
-            </form>
+            <p>Dedicated to Google</p>
         </div>
     </div>
     <!-- "results" in index.css -->
     <div class="results" ng-show="haveResults">
-        <!-- To uncomment, delete these three line -->
-        <!--
-
-         <div ng-show="haveKnowledge">
-            <section class="col-xs-12 col-sm-6 col-md-12 know-section">
-                <article class="search-result row">
-                    <!-- excerpet: if line is too line, only show some of them -->
-
-        <!--
-
-                    <div class="col-xs-12 col-sm-12 col-md-12 excerpet">
-                        <h3><a href="{{'http://' + knowledge.url}}" target="_blank">{{knowledge.title}}</a></h3>
-                    </div>
-                    <div class="col-xs-12 col-sm-12 col-md-12 excerpet">
-                        <div ng-show="knowledgeMore" class="input-append newsletter-box">
-                            <pre class="shortPre">{{knowledge.short}}...</pre>
-                            <button class="text-center btn bg-gray loadMore" type="button" ng-click="showMore()"> Load More <i class="fa fa-long-arrow-right"> </i> </button>
-                        </div>
-                        <div ng-hide="knowledgeMore">
-                            <pre>{{knowledge.knowledge}}</pre>
-                            <button class="text-center btn bg-gray loadMore" type="button" ng-click="showLess()"> Show Less <i class="fa fa-long-arrow-right"> </i> </button>
-                        </div>
-                    </div>
-                    <span class="clearfix borda"></span>
-                </article>
-            </section>
-         </div>
-
-        -->
-
         <div ng-hide="haveSearchResults">
-            <h3>No available documents matching your search</h3>
+            <h3>No relevant results are available, sorry, please try something else.</h3>
+            <h3>Suggestions:</h3><br>
+            <li>Make sure all words you entered are spelled correctly.</li>
+            <li>Try keywords that are more general.</li>
+            <li>Only English words are allowed here.</li>
         </div>
         <div ng-show="haveSearchResults">
             <hgroup class="mb20">
@@ -83,16 +54,17 @@
                     <span class="clearfix borda"></span>
                 </article>
             </section>
+            <nav style="margin-left: 30px">
+                <ul class="pagination" style="">
+                    <!-- For buttons, if it points to current page, can not click. If not, can click.
+                     getNumbers() lets you be able to dynamically see pages forward. See there are only ten buttons and
+                     you are already on 10, getNumbers() lets you see pages from 10 to 20. This makes the current page always
+                     in the middle of all buttons. See google's -->
+                    <li ng-class="{'current-page': i == currentPage, 'page-cursor': i != currentPage}"  style="margin:0 10px;" ng-repeat="i in getNumber(totalItems)" ng-click="pageChanged(i)" ng-disabled="i == currentPage">{{i}}</li>
+                </ul>
+            </nav>
         </div>
-        <nav style="margin-left: 30px">
-            <ul class="pagination" style="">
-                <!-- For buttons, if it points to current page, can not click. If not, can click.
-                 getNumbers() lets you be able to dynamically see pages forward. See there are only ten buttons and
-                 you are already on 10, getNumbers() lets you see pages from 10 to 20. This makes the current page always
-                 in the middle of all buttons. See google's -->
-                <li ng-class="{'current-page': i == currentPage, 'page-cursor': i != currentPage}"  style="margin:0 10px;" ng-repeat="i in getNumber(totalItems)" ng-click="pageChanged(i)" ng-disabled="i == currentPage">{{i}}</li>
-            </ul>
-        </nav>
+
     </div>
 </body>
 </html>

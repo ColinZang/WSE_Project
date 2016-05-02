@@ -7,8 +7,7 @@ function appCtrl($scope, $http, $location, $anchorScroll) {
     $scope.haveSearchResults = false;
     // $scope.knowledgeMore = false;
     $scope.queryWord = "";
-    $scope.ranker = "Guess what you like!";
-    $scope.totalItems = 10;
+    $scope.totalItems = 5;
     // Will change to the argu in go().
     $scope.currentPage = 1;
     $scope.start = 0;
@@ -22,12 +21,12 @@ function appCtrl($scope, $http, $location, $anchorScroll) {
 
     $scope.getNumber = function(num) {
         var array = [];
-        if ($scope.currentPage < 6) {
-            for (var i = 1; i <= 10; i++)
+        if ($scope.currentPage < 4) {
+            for (var i = 1; i <= 5; i++)
                 array.push(i);
             return array;
         } else  {
-            for (var i = $scope.currentPage - 4; i <= $scope.currentPage + 5; i++)
+            for (var i = $scope.currentPage - 2; i <= $scope.currentPage + 2; i++)
                 array.push(i);
             return array;
         }
@@ -45,7 +44,7 @@ function appCtrl($scope, $http, $location, $anchorScroll) {
         // pageNum is the page user wants to go to. Suppose returned docs have 10 pages. if pageNum is 1, means
         // user wants to go to the first page.
         // This request is encoded in api.js using encodeURIComponents.
-        $http.get('/search?query=' + $scope.queryWord + '&max=100'
+        $http.get('/search?query=' + $scope.queryWord + '&max=50'
         + '&pageResults=10&page=' + pageNum)
             .success(function(data) {
                 $scope.currentPage = pageNum;
@@ -53,35 +52,27 @@ function appCtrl($scope, $http, $location, $anchorScroll) {
                 // THE DOCS HERE SHOULD ONLY RETURNS THE RESULTS ON THE pageNum.
                 var docs = data.results;
                 var docus = [];
-                docs.forEach(function (ele, idx, arr) {
-                    var docu = {};
-                    docu.url = ele.url;
-                    docu.title = decodeURIComponent(ele.title).replace(/\+/g,' ');
-                    docu.preview = decodeURIComponent(ele.preview).replace(/\+/g,' ');
-                    // docu.filePath = ele.filePath;
-                    docus.push(docu);
-                });
-
-                $scope.documents = docus;
+                if (docs.length != 1) {
+                    docs.forEach(function (ele, idx, arr) {
+                        var docu = {};
+                        docu.url = ele.url;
+                        docu.title = decodeURIComponent(ele.title).replace(/\+/g, ' ');
+                        docu.preview = decodeURIComponent(ele.preview).replace(/\+/g, ' ');
+                        // docu.filePath = ele.filePath;
+                        docus.push(docu);
+                    });
+                }
+                
+                // Pagination.
+                if (pageNum * 10 <= docus.length) {
+                    $scope.documents = docus.slice((pageNum - 1) * 10, (pageNum - 1) * 10 + 10);
+                } else {
+                    $scope.documents = docus.slice((pageNum - 1) * 10, docus.length);
+                }
+                // $scope.documents = docus;
 
                 $scope.haveSearchResults = docus.length != 0;
-
-                // $scope.haveKnowledge = data.knowledge != null;
-                // if ($scope.haveKnowledge) {
-                //     var know = {};
-                //     know.title = decodeURIComponent(data.knowledge.title).replace(/\+/g, ' ');
-                //     know.url = data.knowledge.url;
-                //     know.knowledge = decodeURIComponent(data.knowledge.knowledge).replace(/\+/g, ' ');
-                //     if (know.knowledge.length > 300) {
-                //         know.short = decodeURIComponent(data.knowledge.knowledge).replace(/\+/g, ' ').substring(0, 200);
-                //         $scope.knowledgeMore = true;
-                //     } else {
-                //         $scope.knowledgeMore = false;
-                //     }
-                //     know.vote = data.knowledge.vote;
-                //     $scope.knowledge = know;
-                // }
-
+                
 
             });
     };
@@ -89,7 +80,7 @@ function appCtrl($scope, $http, $location, $anchorScroll) {
     $scope.showMore = function () {
         $scope.knowledgeMore = false;
     };
-    
+
     $scope.showLess = function () {
         $scope.knowledgeMore = true;
     };

@@ -1,6 +1,3 @@
-/**
- * Created by feiguan on 12/12/14.
- */
 
 exports.SuccessResponse = function(message, results) {
     this.status = "SUCCESS";

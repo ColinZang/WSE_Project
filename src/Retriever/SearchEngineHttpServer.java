@@ -16,7 +16,7 @@ public class SearchEngineHttpServer {
 
         QueryHandler handler = new QueryHandler();
         // Set up parameters for searching pages for query string.
-        Retriever.prepare();
+        // Retriever.prepare();
         // Start http server to serve incoming request.
         InetSocketAddress address = new InetSocketAddress(SearchEngineHttpServer.PORT);
         HttpServer server = HttpServer.create(address, -1);
